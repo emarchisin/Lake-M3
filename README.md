@@ -34,3 +34,11 @@ flowchart TD
   G[Density instabilities] --> H[Water quality production and consumption];
   H[Water quality production and consumption] --> A[Boundary heat fluxes];
 ```
+
+## How to use it
+Example runfiles will be added soon. You can use the model by importing and running it into your Python script:
+```
+from processBased_lakeModel_functions import get_hypsography, provide_meteorology, initial_profile, run_wq_model, wq_initial_profile, provide_phosphorus, provide_carbon, do_sat_calc, calc_dens,atmospheric_module, get_secview, get_lake_config, get_model_params, get_run_config, get_ice_and_snow , get_num_data_columns
+
+res = run_wq_model(...)
+```
