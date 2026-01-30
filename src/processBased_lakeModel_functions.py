@@ -2245,6 +2245,7 @@ def prodcons_module_woDOCL(
         d[3,3] = (pocrn * resp_pocr * consumption) #POCr consumption
         d[4,4] = (pocln * resp_pocl * consumption) #POCl consumption
         
+        #breakpoint()
         # p = [[carbon_oxygen * npp, 0, 0, 0, 0], # O2 1   [[0, 0, 0, 0, 0, algn * npp * 32/12, 0], o2 production from npp
         #  [0, 0, 0,  (pocrn * resp_pocr * consumption), 0], # DOC-R 2 from POCr respiration
         #  [0, 0, 0, 0, (pocln * resp_pocl * consumption) + 0.2 * npp,], # DOC-L 3 from POCl resp and small npp term
@@ -2354,6 +2355,7 @@ def prodcons_module_woDOCL(
         # Something:
         r[:] = y[:, ci] + dt*p[eye]
     
+        #breakpoint()
         # Solve system of equation:
         y = np.linalg.solve(a, r)
         # breakpoint()
@@ -3913,7 +3915,7 @@ def mixing_module_minlake_RL(
         W_str = W_str
     tau = 1.225 * Cd * Uw ** 2 # wind shear is air density times wind velocity 
     
-    if (tau**3/ calc_dens(u[0])) <= 0:
+    if (tau**3/ calc_dens(u[0])) < 0:
         print('Like, what?')
         breakpoint()
     
@@ -4190,8 +4192,8 @@ def run_wq_model(
   timelabels = None,
   atm_flux=None, 
   lake_num = 1,
-  f_sod = 1e-2,
-  d_thick = 0.001,
+  f_sod = 1E-6, 
+  d_thick = 0.01,
   LIGHTUSEBYPHOTOS = 0.3,
   beta = 0.8
   ):
@@ -4519,6 +4521,7 @@ def run_wq_model(
     ## (2) DIFFUSION
     #breakpoint()
     
+    #breakpoint()
     # --> RL change from diffusion_module to diffusion_module_dAdK
     diffusion_res = diffusion_module_dAdK_v2(
         un = u,
@@ -4595,6 +4598,8 @@ def run_wq_model(
     
     pocr_diff[:, idn] = pocr
     pocl_diff[:, idn] = pocl
+
+    #breakpoint()
     
     # --> RL change
     # if np.max(u) > 26:
@@ -4668,7 +4673,7 @@ def run_wq_model(
 
     #breakpoint()
     
-    
+    #breakpoint()
     ## (WQ2) PRODUCTION CONSUMPTION
     # --> RL change to prodcons_module_woDOCL() from prodcons_module()
     prodcons_res = prodcons_module_woDOCL(
