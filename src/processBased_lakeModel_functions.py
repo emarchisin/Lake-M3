@@ -1120,7 +1120,7 @@ def heating_module(
     else:
         H =  (1- albedo) * (Jsw )  * np.exp(-(kd_light ) * depth)
     
-    Hg = (area[:-1]-area[1:])/dx * Hgeo/(4181 * calc_dens(un[0]))
+    Hg = (area[:-1]-area[1:])/dx * Hgeo/(4184 * calc_dens(un[0]))
     
     Hg = np.append(Hg, Hg.min())
 
@@ -1138,20 +1138,30 @@ def heating_module(
     # # u[(nx-1)] = un[(nx-1)] + ( H[nx-1] * area[(nx-1)]/(area[(nx-1)] ) * 1/(4181 * calc_dens(un[(nx-1)])) + Hg[(nx-1)]/area[(nx-1)]) * dt
     # u[(nx-1)] = un[(nx-1)] + ( (H[nx-2] - H[nx-1])/dx * area[(nx-1)] * 1/(4181 * calc_dens(un[(nx-1)]))/area[(nx-1)] + Hg[(nx-1)]/(area[(nx-1)])) * dt
 
+    Qsw = np.zeros(nx)
+
+
 
 
      # --> RL change
     u[0] = (un[0] + 
-         ((Q * area[0])/(4184 * calc_dens(un[0]) * volume[0]) + ((H[0] * area[0]- H[0+1] * area[0+1]) )/(4184 * calc_dens(un[0]) * volume[0] ) + 
-           ((area[0]* Hgeo - area[0+1]* Hgeo))/(4184 * calc_dens(un[0]) * volume[0])) * dt)
+         ((Q * area[0])/(4184 * calc_dens(un[0]) * volume[0])) * dt) #((H[0] * area[0]- H[0+1] * area[0+1]) )/(4184 * calc_dens(un[0]) * volume[0] ) +
+          # ((area[0]* Hgeo - area[0+1]* Hgeo))/(4184 * calc_dens(un[0]) * volume[0])
+          # ) * dt)
        # all layers in between
-    for i in range(1,(nx-1)):
-           u[i] = un[i] + ( ( (H[i] * area[i]- H[i+1] * area[i+1]))/(4184 * calc_dens(un[i]) * volume[i] ) + 
-               ((area[i]* Hgeo - area[i+1] * Hgeo))/(4184 * calc_dens(un[i]) * volume[i]))* dt
+    for i in range(0,(nx)):
+           
+           Qsw[i] = kd_light * (1 - albedo) * Jsw * np.exp(-kd_light * depth[i])
+           u[i] += (Qsw[i] / (calc_dens(un[i]) * 4184)) * dt
+
+           #u[i] = u[i] + ( #( (H[i] * area[i]- H[i+1] * area[i+1]))/(4184 * calc_dens(un[i]) * volume[i] ) + 
+           #    ((area[i]* Hgeo - area[i+1] * Hgeo))/(4184 * calc_dens(u[i]) * volume[i]))* dt
        # bottom layer
-    u[(nx-1)] = un[(nx-1)] +( ( (H[nx-2] * area[nx-2]- H[nx-1] * area[nx-1]) )/(4184 * calc_dens(un[nx-1]) * volume[nx-1] ) + 
-           ((area[nx-2]* Hgeo - area[nx-1]* Hgeo))/(4184 * calc_dens(un[nx-1]) * volume[nx-1]))* dt
-     
+    #u[(nx-1)] = u[(nx-1)] +( #( (H[nx-2] * area[nx-2]- H[nx-1] * area[nx-1]) )/(4184 * calc_dens(un[nx-1]) * volume[nx-1] ) + 
+    #       ((area[nx-2]* Hgeo - area[nx-1]* Hgeo))/(4184 * calc_dens(u[nx-1]) * volume[nx-1]))* dt
+    # bottom cell only
+    u[-1] += (Hgeo / (calc_dens(un[-1]) * 4184 * dx)) * dt
+ 
 
     end_time = datetime.datetime.now()
     #print("heating: " + str(end_time - start_time))
