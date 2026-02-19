@@ -3811,7 +3811,8 @@ def advection_diffusion_module_mylake(
         pocrn,
         pocln,
         volume,
-        settling_rate,
+        settling_rate_labile,
+        settling_rate_refractory,
         g = 9.81,
         ice = 0,
         Cd = 0.013,
@@ -3875,9 +3876,10 @@ def advection_diffusion_module_mylake(
 
 
     #breakpoint()
-    Fi = tridiag_HAD_v11(Kz =kz , U = settling_rate, Vz = volume, Az = area, dz = dx, dt = dt)
-    pocrn =spsolve(Fi, pocrn) 
-    pocln =spsolve(Fi, pocln) 
+    Fi_labile = tridiag_HAD_v11(Kz =kz , U = settling_rate_labile, Vz = volume, Az = area, dz = dx, dt = dt)
+    Fi_refractory = tridiag_HAD_v11(Kz =kz , U = settling_rate_refractory, Vz = volume, Az = area, dz = dx, dt = dt)
+    pocrn =spsolve(Fi_refractory, pocrn) 
+    pocln =spsolve(Fi_labile, pocln) 
 
     # breakpoint()
     
@@ -4184,7 +4186,8 @@ def run_wq_model(
   resp_poc = -0.1,
   resp_pocr= -0.1,
   resp_pocl= -0.1,
-  settling_rate = 0.3,
+  settling_rate_labile = 0.03,
+  settling_rate_refractory = 0.3,
   sediment_rate = 0.01,
   piston_velocity = 1.0,
   light_water = 0.125,
@@ -4598,7 +4601,8 @@ def run_wq_model(
         nx = nx,
         diffusion_method = diffusion_method,
         scheme = scheme,
-        settling_rate = settling_rate
+        settling_rate_labile = settling_rate_labile,
+        settling_rate_refractory = settling_rate_refractory
         )
     
     pocr = advection_res['pocr']
