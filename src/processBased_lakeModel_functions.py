@@ -305,353 +305,6 @@ def eddy_diffusivity_pacanowskiPhilander(rho, depth, g, rho_0, ice, area, U10, l
     # kz = ak * (buoy)**(-0.43)
     return(kz)
 
-def get_secview(secchifile):
-    if secchifile is not None:
-        secview0 = pd.read_csv(secchifile)
-        secview0['sampledate'] = pd.to_datetime(secview0['sampledate'])
-        secview = secview0.loc[secview0['sampledate'] >= startDate]
-        if secview['sampledate'].min() >= startDate:
-          firstVal = secview.loc[secview['sampledate'] == secview['sampledate'].min(), 'secnview'].values[0]
-          firstRow = pd.DataFrame(data={'sampledate': [startDate], 'secnview':[firstVal]})
-          secview = pd.concat([firstRow, secview], ignore_index=True)
-      
-          
-        secview['dt'] = (secview['sampledate'] - secview['sampledate'][0]).astype('timedelta64[s]') + 1
-        secview['kd'] = 1.7 / secview['secnview']
-        secview['kd'] = secview.set_index('sampledate')['kd'].interpolate(method="linear").values
-    else:
-        secview = None
-    
-    return(secview)
-
-def provide_meteorology(meteofile, windfactor, lat, lon, elev, startDate):
-
-    meteo = pd.read_csv(meteofile)
-    daily_meteo = meteo
-
-    daily_meteo['date'] = pd.to_datetime(daily_meteo['datetime'])
-
-    daily_meteo = daily_meteo.loc[
-    (daily_meteo['date'] >= startDate) ]
-    daily_meteo['ditt'] = abs(daily_meteo['date'] - startDate)
-
-
-    
-    daily_meteo['Cloud_Cover'] = calc_cc(date = daily_meteo['date'],
-                                                airt = daily_meteo['Air_Temperature_celsius'],
-                                                relh = daily_meteo['Relative_Humidity_percent'],
-                                                swr = daily_meteo['Shortwave_Radiation_Downwelling_wattPerMeterSquared'],
-                                                lat =  lat, lon = lon,
-                                                elev = elev)
-
-    
-    #daily_meteo['dt'] = (daily_meteo['date'] - daily_meteo['date'][0]).astype('timedelta64[s]') + 1
-    # time_diff = daily_meteo['date'] - daily_meteo['date'].iloc[0]
-    # daily_meteo['dt'] = time_diff.dt.total_seconds() + 1.0
-
-    daily_meteo.reset_index(drop=True, inplace=True)
-
-    time_diff = (daily_meteo['date'] -  daily_meteo['date'][0]).astype('timedelta64[s]') ##RL init cond change
-    daily_meteo['dt'] =time_diff.dt.total_seconds() +1
-    daily_meteo['ea'] = (daily_meteo['Relative_Humidity_percent'] * 
-      (4.596 * np.exp((17.27*(daily_meteo['Air_Temperature_celsius'])) /
-      (237.3 + (daily_meteo['Air_Temperature_celsius']) ))) / 100)
-    daily_meteo['ea'] = ((101.325 * np.exp(13.3185 * (1 - (373.15 / (daily_meteo['Air_Temperature_celsius'] + 273.15))) -
-      1.976 * (1 - (373.15 / (daily_meteo['Air_Temperature_celsius'] + 273.15)))**2 -
-      0.6445 * (1 - (373.15 / (daily_meteo['Air_Temperature_celsius'] + 273.15)))**3 -
-      0.1229 * (1 - (373.15 / (daily_meteo['Air_Temperature_celsius'] + 273.15)))**4)) * daily_meteo['Relative_Humidity_percent']/100)
-    daily_meteo['ea'] = (daily_meteo['Relative_Humidity_percent']/100) * 10**(9.28603523 - 2322.37885/(daily_meteo['Air_Temperature_celsius'] + 273.15))
-    startDate = pd.to_datetime(daily_meteo.loc[0, 'date']) 
-    
-    ## calibration parameters
-    daily_meteo['Shortwave_Radiation_Downwelling_wattPerMeterSquared'] = daily_meteo['Shortwave_Radiation_Downwelling_wattPerMeterSquared'] 
-    daily_meteo['Ten_Meter_Elevation_Wind_Speed_meterPerSecond'] = daily_meteo['Ten_Meter_Elevation_Wind_Speed_meterPerSecond'] * windfactor # wind speed multiplier
-    
-    date_time = daily_meteo.date
-
-    daily_meteo['day_of_year_list'] = [t.timetuple().tm_yday for t in date_time]
-    daily_meteo['time_of_day_list'] = [t.hour for t in date_time]
-    ## light
-    # Package ID: knb-lter-ntl.31.30 Cataloging System:https://pasta.edirepository.org.
-    # Data set title: North Temperate Lakes LTER: Secchi Disk Depth; Other Auxiliary Base Crew Sample Data 1981 - current.
-    
-    
-    return(daily_meteo)
-
-
-#get the first row with data  
-def get_data_start(row):
-    for column_name, value in row.items():
-        try:
-            if isinstance(float(value), float):  # checks if value is numeric
-                return column_name
-        except:
-            continue
-    return None
-      
-def get_num_data_columns(csv_path, row_name):
-    # read CSV without forcing any index
-    df = pd.read_csv(csv_path, index_col=0)
-
-    if row_name not in df.index:
-        raise ValueError(f"Row '{row_name}' not found in CSV index.")
-
-    # get the row by name
-    row = df.loc[row_name]
-
-    # find the first numeric column in that row
-    start_col = get_data_start(row)
-    if start_col is None:
-        return 0  # no numeric data found
-
-    # count columns from the first numeric column to the end
-    start_idx = df.columns.get_loc(start_col)
-    num_columns = len(df.columns[start_idx:])
-
-    return num_columns
-    
-#get a the configuration for a given row
-def get_lake_config (lake_config_file, iteration = 1):
-    df = pd.read_csv(lake_config_file, index_col = 0)
-    first_column = get_data_start(df.loc["Zmax"])
-    col_index = df.columns.get_loc(first_column)
-    
-    col = df.iloc[:, col_index + iteration - 1]
-    def try_cast(x):
-        try:
-            return float(x) if '.' in str(x) or 'e' in str(x).lower() else int(x)
-        except:
-            return x
-
-    col = col.apply(try_cast)
-    return col
-
-def get_model_params(model_params_file, iteration=1):
-    df = pd.read_csv(model_params_file, index_col=0)
-    df = df.replace('None', np.nan) 
-    df.replace({np.nan: None})
-    first_column = get_data_start(df.loc["km"])
-    col_index = df.columns.get_loc(first_column)
-
-    col = df.iloc[:, col_index + iteration - 1]
-
-    def try_cast(x):
-        
-        
-        
-        try:
-            return float(x) if '.' in str(x) or 'e' in str(x).lower() else int(x)
-        except:
-            return x
-
-    return col.apply(try_cast)
-
-
-
-
-def get_run_config (run_config_file, iteration = 1):
-    df = pd.read_csv(run_config_file, index_col = 0)
-    first_column = get_data_start(df.loc["nx"])
-    col_index = df.columns.get_loc(first_column)
-    col = df.iloc[:, col_index + iteration - 1]
-    def try_cast(x):
-        try:
-            return float(x) if '.' in str(x) or 'e' in str(x).lower() else int(x)
-        except:
-            return x
-
-    col = col.apply(try_cast)
-    return col
-
-def get_ice_and_snow (ice_and_snow_file, iteration = 1):
-    df = pd.read_csv(ice_and_snow_file, index_col = 0)
-    first_column = get_data_start(df.loc["Hi"])
-    col_index = df.columns.get_loc(first_column)
-    
-    col = df.iloc[:, col_index + iteration - 1]
-    def try_cast(x):
-        try:
-            return float(x) if '.' in str(x) or 'e' in str(x).lower() else int(x)
-        except:
-            return x
-
-    col = col.apply(try_cast)
-    return col
-
-def provide_phosphorus(tpfile, startingDate, startTime):
-    phos = pd.read_csv(tpfile)
-
-    daily_tp = phos
-    daily_tp['date'] = pd.to_datetime(daily_tp['datetime'])
-    
-    daily_tp['ditt'] = abs(daily_tp['date'] - startingDate)
-    daily_tp = daily_tp.loc[daily_tp['date'] >= startingDate]
-    if startingDate < daily_tp['date'].min():
-        daily_tp.loc[-1] = [startingDate, 'epi', daily_tp['tp'].iloc[0], startingDate, daily_tp['ditt'].iloc[0]]  # adding a row
-        daily_tp.index = daily_tp.index + 1  # shifting index
-        daily_tp.sort_index(inplace=True) 
-        #daily_tp['dt'] = (daily_tp['date'] - daily_tp['date'].iloc[0]).astype('timedelta64[s]') + startTime 
-    # time_diff = daily_tp['date'] - daily_tp['date'].iloc[0]
-    # daily_tp['dt'] = time_diff.dt.total_seconds() + startTime
-    time_diff = (daily_tp['date'] - daily_tp['date'].iloc[0]).astype('timedelta64[s]') #RL init cond change
-    daily_tp['dt'] =time_diff.dt.total_seconds() + startTime
-    return(daily_tp)
-
-
-def provide_carbon(ocloadfile, startingDate, startTime):
-
-    # Read Daily OC load input file
-    oc_load = pd.read_csv(ocloadfile)
-    oc_load['datetime'] = pd.to_datetime(oc_load['datetime'])
-    oc_load["date"] = oc_load["datetime"]
-    full_range = pd.date_range(
-        start = oc_load['date'].min(), 
-        end = oc_load['date'].max(),
-        freq = "H"
-    )
-    expanded = pd.DataFrame({"datetime": full_range})
-    expanded = expanded.merge(oc_load, on = "datetime", how = "left")
-    expanded = expanded.ffill()
-    oc_load = expanded
-
-    # Filter data starting from model start date
-    daily_oc = oc_load.loc[
-    (oc_load['date'] >= startingDate) ]
-    daily_oc['ditt'] = abs(daily_oc['date'] - startingDate)
-
-   
-
-    # If startingDate precedes data, insert an initial row
-    if startingDate < daily_oc['date'].min():
-        first_row = {
-            'datetime': startingDate,
-            'discharge': oc_load['discharge'].iloc[0],
-            'oc': oc_load['oc'].iloc[0],
-            'date': startingDate,
-            'ditt': (daily_oc['date'].iloc[0] - startingDate)
-        }
-        daily_oc = pd.concat([pd.DataFrame([first_row]), daily_oc], ignore_index=True)
-
-    # Compute time offset from simulation start
-    print("Unique datetimes in daily_oc:")
-    print(daily_oc['date'].unique())
-    print("Shape:", daily_oc.shape)
-    #daily_oc['dt'] = (daily_oc['date'] - daily_oc['date'].iloc[0]).dt.total_seconds() + startTime
-    # time_diff = daily_oc['date'] - daily_oc['date'].iloc[0]
-    # daily_oc['dt'] = time_diff.dt.total_seconds() + startTime
-    time_diff = (daily_oc['datetime'] - daily_oc['datetime'][0]).astype('timedelta64[s]') ##RL init cond change
-    daily_oc['dt'] =time_diff.dt.total_seconds() + 1
-    #daily_oc['dt'] = (daily_oc['date'] - daily_oc['date'].iloc[0]).dt.total_seconds() + startTime
-    #compute total carbon load as oc_mgl * discharge
-    daily_oc['total_carbon'] = daily_oc['oc'] * daily_oc['discharge']
-    daily_oc['hourly_carbon']=daily_oc['total_carbon']/24
-
-
-    #fill in hourly times
-
-    return daily_oc
-
-def initial_profile(initfile, nx, dx, depth, startDate):
-  #meteo = processed_meteo
-  #startDate = meteo['date'].min()
-  obs = pd.read_csv(initfile)
-  obs['datetime'] = pd.to_datetime(obs['datetime'])
-  obs['ditt'] = abs(obs['datetime'] - startDate)
-  init_df = obs.loc[obs['ditt'] == obs['ditt'].min()]
-  if max(depth) > init_df.Depth_meter.max():
-    lastRow = init_df.loc[init_df.Depth_meter == init_df.Depth_meter.max()]
-    init_df = pd.concat([init_df, lastRow], ignore_index=True)
-    init_df.loc[init_df.index[-1], 'Depth_meter'] = max(depth)
-  print("Selected initial profile date:", init_df['datetime'].iloc[0])
-  print("Max depth in profile:", init_df['Depth_meter'].max())
-  print("Lake max depth:", max(depth))
-
-  profile_fun = interp1d(init_df.Depth_meter.values, init_df.Water_Temperature_celsius.values)
-  out_depths = depth # these aren't actually at the 0, 1, 2, ... values, actually increment by 1.0412; make sure okay
-  u = profile_fun(out_depths)
-  
-  # TODO implement warning about profile vs. met start date
-  
-  return(u)
-
-def wq_initial_profile(initfile, nx, dx, depth, volume, startDate):
-  #meteo = processed_meteo
-  #startDate = meteo['date'].min()
-  obs = pd.read_csv(initfile)
-  obs['datetime'] = pd.to_datetime(obs['datetime'])
-  
-  do_obs = obs.loc[obs['variable'] == 'do']
-  do_obs['ditt'] = abs(do_obs['datetime'] - startDate)
-  init_df = do_obs.loc[do_obs['ditt'] == do_obs['ditt'].min()]
-  if max(depth) > init_df.depth.max():
-    lastRow = init_df.loc[init_df.depth == init_df.depth.max()]
-    init_df = pd.concat([init_df, lastRow], ignore_index=True)
-    init_df.loc[init_df.index[-1], 'depth'] = max(depth)
-    
-  profile_fun = interp1d(init_df.depth.values, init_df.observation.values)
-  out_depths =depth# these aren't actually at the 0, 1, 2, ... values, actually increment by 1.0412; make sure okay
-  do = profile_fun(out_depths)
-  
-  doc_obs = obs.loc[obs['variable'] == 'doc']
-  doc_obs['ditt'] = abs(doc_obs['datetime'] - startDate)
-  init_df = doc_obs.loc[doc_obs['ditt'] == doc_obs['ditt'].min()]
-  # if max(depth) > init_df.depth.max():
-  #   lastRow = init_df.loc[init_df.depth == init_df.depth.max()]
-  #   init_df = pd.concat([init_df, lastRow], ignore_index=True)
-  #   init_df.loc[init_df.index[-1], 'depth'] = max(depth)
-    
-  if init_df.depth.min()>0: #assumed mixed epi, if no 0m available then it pulls from shallowest option
-    shallowest = init_df.loc[init_df.depth == init_df.depth.min()].copy()
-    shallowest.loc[:, 'depth'] = 0.0  # set depth to 0
-    init_df = pd.concat([shallowest, init_df], ignore_index=True)  
-  if max(depth) > init_df.depth.max():
-    lastRow = init_df.loc[init_df.depth == init_df.depth.max()]
-    init_df = pd.concat([init_df, lastRow], ignore_index=True)
-    init_df.loc[init_df.index[-1], 'depth'] = max(depth)
-  profile_fun = interp1d(init_df.depth.values, init_df.observation.values)
-  out_depths = depth# these aren't actually at the 0, 1, 2, ... values, actually increment by 1.0412; make sure okay
-  doc = profile_fun(out_depths)
-  
-  u = np.vstack((do * volume, doc * volume))
-  
-  #print(u)
-  # TODO implement warning about profile vs. met start date
-  
-  return(u)
-
-def get_hypsography(hypsofile, dx, nx, outflow_depth=None):
-#def get_hypsography(hypsofile, dx, nx):
-  hyps = pd.read_csv(hypsofile)
-  out_depths = np.linspace(0, nx*dx, nx+1)
-  area_fun = interp1d(hyps.Depth_meter.values, hyps.Area_meterSquared.values)
-  area = area_fun(out_depths)
-  area[-1] = area[-2] - 1 # TODO: confirm this is correct
-  depth = np.linspace(0, nx*dx, nx+1)
-  
-  volume = area * 1000
-  # volume = 0.5 * (area[:-1] + area[1:]) * np.diff(depth)
-  # volume = (area[:-1] + area[1:]) * np.diff(depth)
-  for d in range(0, (len(depth)-1)):
-      volume[d] = np.abs(sum(area[0:(d+1)] * dx) - sum(area[0:d] * dx))
-
-  # volume = (area[:-1] - area[1:]) * np.diff(depth)
-  # volume = np.append(volume, 1000)
-  
-  volume = volume[:-1]
-  depth = 1/2 * (depth[:-1] + depth[1:])
-  area = 1/2 * (area[:-1] + area[1:])
-  
-  if outflow_depth is not None:
-      mask=depth<=(outflow_depth+0.25) #depths off set by 0.25m, corrects for difference
-      hypso_weight= np.zeros_like(volume)
-      total_volume=np.sum(volume[mask])
-      hypso_weight[mask]=volume[mask]/total_volume
-  else: 
-        total_volume=np.sum(volume)
-        hypso_weight=volume/total_volume
-  
-  return([area, depth, volume, hypso_weight])
-
 def longwave(cc, sigma, Tair, ea, emissivity, Jlw):  # longwave radiation into
   Tair = Tair + 273.15
   p = (1.33 * ea/Tair)
@@ -1378,7 +1031,6 @@ def thermocline_depth(
         dt,
         nx):
     
-    #breakpoint()
 
     
     Smin = 0.1
@@ -2161,11 +1813,11 @@ def prodcons_module_woDOCL(
         piston_velocity = 1.0,
         sw_to_par = 2.114,
         growth_rate = 1.1,
-        #grazing_ratio = 0.1,not used in function
         alpha_gpp = 0.1/3600,
         beta_gpp = 4.2/3600,
         o2_to_chla = 41.5/3600,
-        LIGHTUSEBYPHOTOS = 0.3,
+        prop_I_npp = 0.3,
+        k_TP=0.06,
         beta = 0.8): 
 
     
@@ -2254,22 +1906,10 @@ def prodcons_module_woDOCL(
         d[2,2] = (docln * resp_docl * consumption) #DOCl consumption
         d[3,3] = (pocrn * resp_pocr * consumption) #POCr consumption
         d[4,4] = (pocln * resp_pocl * consumption) #POCl consumption
-        
-        #breakpoint()
-        # p = [[carbon_oxygen * npp, 0, 0, 0, 0], # O2 1   [[0, 0, 0, 0, 0, algn * npp * 32/12, 0], o2 production from npp
-        #  [0, 0, 0,  (pocrn * resp_pocr * consumption), 0], # DOC-R 2 from POCr respiration
-        #  [0, 0, 0, 0, (pocln * resp_pocl * consumption) + 0.2 * npp,], # DOC-L 3 from POCl resp and small npp term
-        #  [0, 0, 0, 0, 0], # POC-R 4
-        #  [0, 0, 0, 0, 0.8*npp ]] # POC-L 5] from npp
-        # d = [[0, carbon_oxygen* (docrn * resp_docr * consumption), carbon_oxygen *(docln * resp_docl * consumption), carbon_oxygen * (pocrn * resp_pocr * consumption), carbon_oxygen * (pocln * resp_pocl * consumption)],
-        #  [0, (docrn * resp_docr * consumption), 0, 0, 0],
-        #  [0, 0, (docln * resp_docl * consumption), 0, 0],
-        #  [0, 0, 0, (pocrn * resp_pocr * consumption), 0],
-        #  [0, 0, 0, 0, (pocln * resp_pocl * consumption)]]
-        #breakpoint()H
+   
         return p,d
 
-    def solve_mprk(fun, y0, dt, dx, resp, theta_r, u, volume, LIGHTUSEBYPHOTOS, beta, area, k_half, H, sw_to_par, IP_m, TP, theta_npp, kd_light, depth, Jsw,
+    def solve_mprk(fun, y0, dt, dx, resp, theta_r, u, volume, prop_I_npp, k_TP,beta, area, k_half, H, sw_to_par,p_max, IP_m, TP, theta_npp, kd_light, depth, Jsw,
                    p = 1.0 / 86400, h = 55 / 4.16, m = 2 /1000):
         
         # par https://strang.smhi.se/extraction/units-conversion.html
@@ -2306,15 +1946,15 @@ def prodcons_module_woDOCL(
             
         PAR = H * sw_to_par / 1e6 # mol/m2/s 
 
-        P_max = 1.5 * 10**(-6) # mol C/m2/s
+        #P_max = 1.5 * 10**(-6) # mol C/m2/s
         alpha_P = 0.03 # mol C per mol photon
-        LIGHTUSEBYPHOTOS = 0.3 # proportion of the ambient light taken up by phytos
+        #LIGHTUSEBYPHOTOS = 0.3 # proportion of the ambient light taken up by phytos
 
-        P_I = P_max * (1 - exp(- (alpha_P*LIGHTUSEBYPHOTOS) * PAR/P_max)) # mol C/m2/s
+        P_I = p_max * (1 - exp(- (alpha_P*prop_I_npp) * PAR/p_max)) # mol C/m2/s
 
-        k_TP = 0.06 * 1000 # mg/L
+        k_TP_mg = k_TP * 1000 # mg/L
 
-        f_TP = TP / (k_TP + TP) # dimensionless
+        f_TP = TP / (k_TP_mg + TP) # dimensionless
 
         temp =  theta_npp**(u - 20) 
 
@@ -2390,7 +2030,7 @@ def prodcons_module_woDOCL(
         # docr docl pocr pocl 
         mprk_res = solve_mprk(fun, y0 =  [o2n[dep], docrn[dep], docln[dep], pocrn[dep], pocln[dep]], dt = dt, dx = dx,
                resp = [resp_docr, resp_docl, resp_pocr, resp_pocl], theta_r = theta_r, u = u[dep],
-               volume = volume[dep], LIGHTUSEBYPHOTOS =LIGHTUSEBYPHOTOS, beta = beta, area = area[dep],k_half = k_half,
+               volume = volume[dep], prop_I_npp =prop_I_npp,k_TP=k_TP,p_max=p_max, beta = beta, area = area[dep],k_half = k_half,
                H = H[dep], sw_to_par = sw_to_par, IP_m = IP_m, TP = TP, theta_npp = theta_npp,
                kd_light = kd_light, depth = depth[dep], Jsw = H_in)
         o2[dep], docr[dep], docl[dep], pocr[dep], pocl[dep] = mprk_res[0]
@@ -4207,7 +3847,8 @@ def run_wq_model(
   lake_num = 1,
   f_sod = 1E-6, 
   d_thick = 0.01,
-  LIGHTUSEBYPHOTOS = 0.3,
+  prop_I_npp = 0.3,
+  k_TP=0.06,
   beta = 0.8
   ):
     
@@ -4724,7 +4365,9 @@ def run_wq_model(
         resp_poc = resp_poc,
         resp_pocl=resp_pocl,
         resp_pocr=resp_pocr,
-        LIGHTUSEBYPHOTOS = LIGHTUSEBYPHOTOS,
+        prop_I_npp = prop_I_npp,
+        k_TP=k_TP,
+        p_max=p_max,
         beta = beta)
     
     o2 = prodcons_res['o2']
@@ -5095,200 +4738,7 @@ def run_wq_model(
       kzm = np.transpose(kzm)
       #pd.DataFrame(thermo_depm).to_csv(training_data_path+"/thermo_depth_final06.csv", index = False)
       # pd.DataFrame(kzm).to_csv(training_data_path+"/kz_initial00.csv", index = False)
-      
-      
-      # filenames = next(os.walk(training_data_path), (None, None, []))[2]
-      # for name in filenames:
-      #     if "0" in name:
-      #         print("editing " + name)
-      #         fullname = training_data_path+'/'+name
-      #         df = pd.read_csv(fullname)
-      #         if "final" in name:
-      #             new_columns = {col: ((float(col)+1)/2)-0.5 for col in df.columns}
-      #             df.rename(columns=new_columns, inplace=True)
-      #         df.index = timelabels
-      #         df.index.names = ["datetime"]
-      #         os.remove(fullname)
-      #         df.to_csv(fullname)
 
-      
-      def melt_var(arr_2d, datetimes, depth, varname):
-        arr_2d = np.asarray(arr_2d)
-
-        if arr_2d.shape[0] == len(datetimes) and arr_2d.shape[1] == len(depth):
-            arr_2d = arr_2d.T
-
-        n_depths, n_times = arr_2d.shape
-
-        return pd.DataFrame({
-            "datetime": np.repeat(datetimes, n_depths),
-            "depth": np.tile(depth, n_times),
-            varname: arr_2d.flatten()
-        })
-
-
-      # Build long tables for all variables
-      print("DEBUG SHAPES:")
-      print("depth length:", len(depth))
-      print("times length:", len(times))
-
-      print("um shape:", np.asarray(um).shape)
-      #print("o2 shape:", np.asarray(o2_mgL).shape)
-      print("doc_final shape:", np.asarray(doc_final).shape)
-      print("poc_final shape:", np.asarray(poc_final).shape)
-      print("TPm shape:", np.asarray(TPm).shape)
-      dfs = []
-      dfs.append(melt_var(um, timelabels, depth, "WaterTemp_C"))
-      dfs.append(melt_var(o2_mgL, timelabels, depth, "Water_DO_mg_per_L"))
-      dfs.append(melt_var(doc_final, timelabels, depth, "Water_DOC_mg_per_L"))
-      dfs.append(melt_var(poc_final, timelabels, depth, "Water_POC_mg_per_L"))
-     # dfs.append(melt_var(TPm, times, depth, "Water_TP_mg_per_L"))
-      fm_lake = dfs[0]
-      for df in dfs[1:]:
-        fm_lake = fm_lake.merge(df, on=["datetime", "depth"], how="left")
-      fm_lake["Date"] = pd.to_datetime(fm_lake["datetime"]).dt.floor("D")
-
-      fm_lake_daily = (
-       fm_lake
-        .groupby(["Date", "depth"], as_index=False)
-        .mean(numeric_only=True)
-        )
-      fm_lake_daily.to_csv(
-        os.path.join(training_data_path, f"lake{lake_num}_daily.csv"),
-         index=False
-       )
-     
-      fm_driver = pd.DataFrame({
-        
-        "datetime": timelabels,
-
-        "Shortwave_Wm2": meteo_pgdl[4, :],
-        "sum_Longwave_Radiation_Downwelling_wattPerMeterSquared": meteo_pgdl[1, :],
-        "AirTemp_C": meteo_pgdl[0, :],
-        "median_Ten_Meter_Elevation_Wind_Speed_meterPerSecond": meteo_pgdl[12, :],
-        "sum_Precipitation_millimeterPerDay": meteo_pgdl[15, :],
-        "Water_Secchi_m": secchim.flatten(),
-        "TP_load_g_per_d": TPm2.flatten(),  # TPm moved here
-    
-        #"Discharge_m3_per_d": discharge,
-       # "TOC_load_g_per_d": total_carbon
-        })
-      fm_driver["Date"] = fm_driver["datetime"].dt.floor("D")
-
-      sum_vars = [
-        "sum_Longwave_Radiation_Downwelling_wattPerMeterSquared",
-        "sum_Precipitation_millimeterPerDay",
-        "TP_load_g_per_d",
-        "TOC_load_g_per_d",
-        "Discharge_m3_per_d"
-       ]
-
-      median_vars = [
-        "Shortwave_Wm2",
-        "AirTemp_C",
-        "median_Ten_Meter_Elevation_Wind_Speed_meterPerSecond",
-        "Water_Secchi_m"
-        ]
-
-      fm_driver_daily = (
-            fm_driver
-            .groupby("Date")
-            .agg(
-                {**{v: "sum" for v in sum_vars if v in fm_driver},
-                **{v: "median" for v in median_vars if v in fm_driver}}
-            )
-            .reset_index()
-        )
-      print("Start:", fm_driver["datetime"].min())
-      print("End:", fm_driver["datetime"].max())
-      print("Days:", fm_driver["Date"].nunique())
-
-
-      fm_driver_daily.to_csv(
-            os.path.join(training_data_path, f"lake{lake_num}_driver_daily.csv"),
-            index=False
-        )
-
-
-
-
-     # dfs.append(melt_var(um,times, depth, "WaterTemp_C"))
-      #dfs.append(melt_var(o2_mgL, times, depth, "Water_DO_mg_per_L"))
-#       dfs.append(melt_var(doc_final,times, depth, "Water_DOC_mg_per_L"))
-#       dfs.append(melt_var(poc_final,times, depth, "Water_POC_mg_per_L"))
-#       #dfs.append(melt_var(TPm,             times, depth, "Water_TP_mg_per_L"))
-
-# # Merge all variables by datetime + depth
-#       fm_lake = dfs[0]
-#       for df in dfs[1:]:
-#           fm_lake = fm_lake.merge(df, on=["datetime", "depth"], how="left")
-
-# # Create daily date column
-#       fm_lake["date"] = fm_lake["datetime"].dt.floor("D")
-#       fm_lake_daily = (
-#           fm_lake
-#           .groupby(["date", "depth"])
-#           .mean(numeric_only=True)
-#           .reset_index()
-#       )
-
-#       fm_lake_daily.to_csv(training_data_path + "fm_lake_daily.csv", index=False)
-
-
-#     #pd.DataFrame(fm_lake_daily).to_csv(training_data_path+"fm_lake_daily.csv", index = False)
-
-#     #   fm_driver=pd.DataFrame({'datetime':times})
-#     #   fm_driver['LightAttenutation_Kd']=kd_lightm.T.flatten()
-#     #   fm_driver['Water_Secchi_m']=secchim.T.flatten()
-#     #   #fm_driver['TOC_load_g_per_d']=total_carbon.T.flatten()
-#     #   fm_driver['thermocline_depth_m']=thermo_depm.T.flatten()
-   #  fm_driver['Discharge_m3_per_d']=p.repeat(discharge)
-#     #   #meteo_pgdl = res['meteo_input']
-#     #   fm_driver['AirTemp_C'] = meteo_pgdl[0, :]
-#     #   fm_driver['sum_Longwave_Radiation_Downwelling_wattPerMeterSquared'] = meteo_pgdl[1, :]
-#     #   fm_driver['Shortwave_Wm2'] = meteo_pgdl[4, :]
-#     #   fm_driver['median_Ten_Meter_Elevation_Wind_Speed_meterPerSecond'] = meteo_pgdl[12, :] 
-#     #   fm_driver['sum_Precipitation_millimeterPerDay'] = meteo_pgdl[15, :]
-    
-#       fm_driver = pd.DataFrame({
-#           'datetime':pd.to_datetime(times),
-#           'LightAttenutation_Kd': kd_lightm.T.flatten(),
-#           'Water_Secchi_m': secchim.T.flatten(),
-#           # 'TOC_load_g_per_d': total_carbon.T.flatten(),
-#           'thermocline_depth_m': thermo_depm.T.flatten(),
-#           'AirTemp_C': meteo_pgdl[0, :],
-#           'sum_Longwave_Radiation_Downwelling_wattPerMeterSquared': meteo_pgdl[1, :],
-#           'Shortwave_Wm2': meteo_pgdl[4, :],
-#           'median_Ten_Meter_Elevation_Wind_Speed_meterPerSecond': meteo_pgdl[12, :],
-#           'sum_Precipitation_millimeterPerDay': meteo_pgdl[15, :]
-#       })
-#       fm_driver['date'] = fm_driver['datetime'].dt.floor('D')
-#       sum_vars = [
-#           'sum_Longwave_Radiation_Downwelling_wattPerMeterSquared',
-#           'sum_Precipitation_millimeterPerDay']
-#       median_vars = [
-#           'AirTemp_C',
-#           'median_Ten_Meter_Elevation_Wind_Speed_meterPerSecond',
-#           'Shortwave_Wm2',
-#           'LightAttenutation_Kd',
-#           'Water_Secchi_m',
-#           'thermocline_depth_m']
-#       #nocollapse_vars = ['TOC_load_g_per_d']
-#       fm_driver_daily = (
-#           fm_driver
-#           .groupby("date")
-#           .agg({
-#               **{c: "sum" for c in sum_vars},
-#               **{c: "median" for c in median_vars}
-#           })
-#           .reset_index()
-#       )
-
-#       # fm_driver_daily = fm_driver_daily.reset_index()
-#       # fm_driver_daily['date'] = fm_driver_daily['datetime'].dt.date
-#       fm_driver_daily.to_csv(training_data_path + "fm_driver_daily.csv", index=False)
-    
- 
   return(dat)
 
 ## functions for gas exchange
