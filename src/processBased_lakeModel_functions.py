@@ -3627,8 +3627,9 @@ def boundary_module_oxygen(
     dv_da = np.gradient(volume/area)
     sed_flux = da_dz  * (d_sod/d_thick/dx * (o2/volume - o2/(2* volume)))
 
-
-    o2 = o2 - np.minimum(o2, ((f_sod  * area  + sed_flux) * dt * theta_r**(u - 20)))
+    do_consumption = ((f_sod  * area  - sed_flux) * dt * theta_r**(u - 20))
+  
+    o2 = o2 - np.minimum(o2, do_consumption)
     #breakpoint()
     # o2[(nx-1)] = o2[(nx-1)] - (f_sod + d_sod/d_thick * o2[nx-1]/volume[nx-1] * area[nx-1]) * dt * theta_r**(u[(nx-1)] - 20) 
     
