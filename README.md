@@ -30,6 +30,8 @@ $A \frac{\partial C}{\partial t} + w \frac{\partial C}{\partial z} - \frac{\part
 
 where $T$ is water temperature, and $C$ represents a water quality state variable. Water temperature and heat transport are simulated using an eddy-diffusion approach in which the turbulent eddy diffusivity coefficients are parameterized based on the gradient Richardson number. To ensure stability, we apply the implicit Crank-Nicolson scheme for the diffusive transport. Production and consumption terms of the water quality dynamics (dissolved oxygen, phytoplankton biomass, nutrients and organic carbon) are simulated using a modified Patankar Runge-Kutta scheme to ensure mass conservation and to prevent unrealistic negative values. Convective wind mixing is parameterized based on an integral energy approach. Further, the model projects growth and decay of ice and snow, as well as coupled feedback loops between organic matter and water clarity.
 
+<a href="url"><img src="lakemodel_all.png" width=60% height=60% ></a>
+
 ## Modules
 Lake-M<sup>3</sup> is an integrated physics-ecology model with process-specific modules. These can be easily modified to test alternative hypotheses and mechanisms.
 
