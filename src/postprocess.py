@@ -121,7 +121,7 @@ def post_process(
         observations_dir, postprocess_config, lake_key,
         startDate, endDate)
     
-    def heatmap_plot(data, temp, ax=None, name=None, vmin=None, vmax=None):
+    def heatmap_plot(data, temp, name=None, ax=None, vmin=None, vmax=None):
 
         created_fig = False
     

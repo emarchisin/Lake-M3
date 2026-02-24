@@ -4631,8 +4631,8 @@ def run_wq_model(
                'atm_flux':atm_flux,
                }
 
-  if training_data_path is not None:
-      training_data_path = os.path.join(training_data_path, f"lake_{lake_num}")
+  if training_data_path is not None and not pd.isna(training_data_path):
+      training_data_path = os.path.join(str(training_data_path), f"lake_{lake_num}")
       os.makedirs(training_data_path, exist_ok=True)  # ensure directory exists
       um_initial = np.transpose(um_initial)
       um_diff = np.transpose(um_diff)
@@ -4710,7 +4710,7 @@ def run_wq_model(
       # pd.DataFrame(pocr_diff).to_csv(training_data_path+"/pocr_diff04.csv", index = False)
       # pd.DataFrame(pocrm).to_csv(training_data_path+"/pocr_conv05.csv", index = False)
       
-      pd.DataFrame(o2m / np.transpose(volume)).to_csv(training_data_path+"/do_final06.csv", index = False)
+      # pd.DataFrame(o2m / np.transpose(volume)).to_csv(training_data_path+"/do_final06.csv", index = False)
       doc_final = np.add(doclm, docrm) / np.transpose(volume)
       poc_final = np.add(poclm, pocrm) / np.transpose(volume)
       # pd.DataFrame(doc_final).to_csv(training_data_path+"/doc_final06.csv", index = False)
