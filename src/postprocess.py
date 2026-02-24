@@ -542,16 +542,6 @@ def post_process(
     tp = res.get("TP", np.zeros_like(light)).flatten()
     tp=tp*1000 # convert mg/L -> ug/L
     
-    print("light:", light.shape)
-    print("temp:", temp_1m.shape)
-    print("tp:", tp.shape)
-    print("npp:", npp_1m.shape)
-    print("TPm keys check:", "TP" in res)
-
-    if "TPm" in res:
-        print("TPm stats:", np.nanmin(res["TPm"]), np.nanmax(res["TPm"]))
-        print("TPm shape:", np.shape(res["TPm"]))
-    
     def plot_driver_panels(light, temp, tp, response, ylabel, fname):
 
         fig, ax = plt.subplots(3, 1, figsize=(6, 10))   
@@ -566,7 +556,6 @@ def post_process(
         ax[2].set_ylabel(ylabel)    
         plt.tight_layout()
         save_fig(fig, lake_output_dir, lake_key, fname)
-        
         
     if is_on(postprocess_config, lake_key, 'npp_driver_panels'):
         plot_driver_panels(light, temp_1m, tp, npp_1m, "NPP", "npp_driver_panels")
