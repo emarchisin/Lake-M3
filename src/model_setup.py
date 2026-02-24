@@ -219,8 +219,8 @@ def provide_meteorology(meteofile, windfactor, lat, lon, elev, startDate, endDat
 
 def provide_phosphorus(tpfile, startingDate, startTime):
     phos = pd.read_csv(tpfile)
-
-    daily_tp = phos
+    phos['tp']=phos['tp']/1000 #conversion from ug/L to mg/L
+    daily_tp = phos.copy()
     daily_tp['date'] = pd.to_datetime(daily_tp['datetime'])
     
     daily_tp['ditt'] = abs(daily_tp['date'] - startingDate)
