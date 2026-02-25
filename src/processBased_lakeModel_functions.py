@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
-from math import pi, exp, sqrt, log, atan, sin, radians, nan, isinf
+from math import pi, exp, sqrt, log, atan, sin, radians, nan, isinf, isnan
 from scipy.interpolate import interp1d
 from copy import deepcopy
 import datetime
@@ -78,7 +78,11 @@ def eddy_diffusivity_hendersonSellers(rho, depth, g, rho_0, ice, area, U10, lati
 
     
     U2 = U10 * 10
-    U2 = U10 * (log((2 - 1e-5)/z0)) / (log((10 - 1e-5)/z0))
+
+    U2 = np.maximum(
+    U10 * (np.log((2 - 1e-5) / z0)) / np.log((10 - 1e-5) / z0),
+    1e-2
+    )
     
     if U2 < 2.2:
         Cd = 1.08 * U2**(-0.15)* 10**(-3)
@@ -147,7 +151,12 @@ def eddy_diffusivity_hendersonSellers(rho, depth, g, rho_0, ice, area, U10, lati
         
     kz = weight * kz + (1 - weight) * diff
 
-    
+
+    if np.any(np.isnan(kz+km)):
+        breakpoint()
+
+    if np.any(np.isinf(kz+km)):
+        breakpoint()    
     # kz = ak * (buoy)**(-0.43)
     return(kz +  km)
 
@@ -2946,6 +2955,14 @@ def diffusion_module_dAdK_v2(
 
     start_time = datetime.datetime.now()
 
+    if np.any(np.isnan(un)):
+        breakpoint()
+
+    if np.any(np.isinf(un)):
+        breakpoint()
+
+
+
     # ensure arrays
     un = np.asarray(un, dtype=float)
     kzn = np.asarray(kzn, dtype=float)
@@ -3627,7 +3644,24 @@ def boundary_module_oxygen(
     dv_da = np.gradient(volume/area)
     sed_flux = da_dz  * (d_sod/d_thick/dx * (o2/volume - o2/(2* volume)))
 
-    do_consumption = ((f_sod  * area  - sed_flux) * dt * theta_r**(u - 20))
+    # sediment-contact area per layer (m2)
+    A_sed = np.maximum(area[:-1] - area[1:], 0.0)
+    A_sed = np.append(A_sed, area[-1])  # bottom layer
+
+    # SOD mass loss (g O2 s-1)
+    sed_oxygen_loss = A_sed * f_sod
+
+    C_o2 = o2/volume
+    C_sed = o2/volume/2
+    F_sed_diff = d_sod[-1] * (C_o2[-1] - C_sed[-1]) / d_thick
+    sed_oxygen_loss[-1] += A_sed[-1] * F_sed_diff
+
+    do_consumption_old = ((f_sod  * area  - sed_flux) * dt * theta_r**(u - 20))
+    do_consumption = ((sed_oxygen_loss) * dt * theta_r**(u - 20))
+
+    # print(do_consumption_old)
+    # print(do_consumption)
+    # breakpoint()
   
     o2 = o2 - np.minimum(o2, do_consumption)
     #breakpoint()
@@ -3646,7 +3680,8 @@ def boundary_module_oxygen(
            'docl': docl,
            'pocr': pocr,
            'pocl':pocl,
-           'npp': -999}
+           'npp': -999,
+           'do_consumption': do_consumption}
 
     
     return dat
@@ -4258,6 +4293,7 @@ def run_wq_model(
   thermo_depm = np.full([1,nCol], np.nan)
   energy_ratiom = np.full([1,nCol], np.nan)
   icem = np.full([1,nCol], np.nan)
+  doconsumptionm = np.full([nx, nCol], np.nan)
   TPm = np.full([1,nCol], np.nan)
 
   um_initial = np.full([nx, nCol], np.nan)
@@ -4504,11 +4540,13 @@ def run_wq_model(
     pocl = boundary_res['pocl']
     npp = boundary_res['npp']
     atm_flux=boundary_res['atm_flux']
+    do_consumption = boundary_res['do_consumption']
     
     o2_ax[:, idn] = o2
     #for n in enumerate
     atm_flux_output[:,idn] = atm_flux
 
+    doconsumptionm[:, idn] = do_consumption
     o2_bc[:, idn] = o2
     docr_bc[:, idn] = docr
     docl_bc[:, idn] = docl
@@ -4531,7 +4569,11 @@ def run_wq_model(
     elif diffusion_method == 'pacanowskiPhilander':
         kz = eddy_diffusivity_pacanowskiPhilander(dens_u_n2, depth, g, np.mean(dens_u_n2) , ice, area, Uw(n),  43.100948, u, kz, Cd, km, weight_kz, k0) / 1
  
-    
+    if np.any(np.isnan(kz)):
+        breakpoint()
+
+    if np.any(np.isinf(kz)):
+        breakpoint()
     ## (2) DIFFUSION
     #breakpoint()
     
@@ -4982,6 +5024,7 @@ def run_wq_model(
                'kd_light': kd_lightm,
                'secchi': 1.7/kd_lightm,
                'thermo_dep': thermo_depm,
+               'do_consumption':doconsumptionm, 
                'energy_ratio': energy_ratiom,
                'ko2_backcalc': ko2_calcm,
                'atm_flux_output':atm_flux_output,
