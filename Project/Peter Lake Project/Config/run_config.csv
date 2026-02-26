@@ -1,0 +1,16 @@
+var,Lake1,Lake2,Lake1a
+start_time,1/1/24 9:00,6/2/22 9:00,1/1/24 9:00
+end_time,12/30/24 4:00,12/30/24 4:00,12/30/24 4:00
+nx,38,38,38
+dt,3600,3600,3600
+dx,0.5,0.5,0.5
+pgdl_mode,on,on,on
+training_data_path,../output,../output,../output
+diffusion_method,pacanowskiPhilander,pacanowskiPhilander,hendersonSellers
+scheme,implicit,implicit,implicit
+u_ini_file,../input/Peter Lake/peter_wtemph.csv,../input/Peter Lake/peter_wtemph.csv,../input/Peter Lake/peter_wtemph.csv
+wq_ini_file,../input/Peter Lake/peter_driver2.csv,../input/Peter Lake/peter_driver2.csv,../input/Peter Lake/peter_driver2.csv
+tp_ini_file,../input/Peter Lake/peter_tp2.csv,../input/Peter Lake/peter_tp2.csv,../input/Peter Lake/peter_tp2.csv
+oc_load_file,../input/Peter Lake/oc_load_file.csv,../input/Peter Lake/oc_load_file.csv,../input/Peter Lake/oc_load_file.csv
+hypso_ini_file,../input/Peter Lake/peter_bath.csv,../input/Peter Lake/peter_bath.csv,../input/Peter Lake/peter_bath.csv
+meteo_ini_file,../input/Peter Lake/nldas_hourly_Cascade2224.csv,../input/Peter Lake/nldas_hourly_Cascade2224.csv,../input/Peter Lake/nldas_hourly_Cascade2224.csv
