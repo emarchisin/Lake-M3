@@ -13,7 +13,7 @@ fm_lake_daily,No,No
 fm_driver_hourly,No,No
 fm_driver_daily,No,No
 o2_heat,No,Yes
-o2_line,No,Yes
+o2_line,Yes,Yes
 wtemp_heat,No,No
 wtemp_line,No,Yes
 docr_heat,No,No

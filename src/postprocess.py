@@ -32,10 +32,17 @@ def get_value(config, lake_key, key):
 
 def depth_to_index(depth_array, target_depth):
     depth_array = np.asarray(depth_array)
-    offset=(depth_array[1]-depth_array[0])/2 # adjusts for the 0.25m off set
-    physical_depth=depth_array-offset
-    return np.abs(depth_array - target_depth).argmin()
 
+    dx = depth_array[1] - depth_array[0]
+
+    # convert physical depth to model center depth
+    target_model_depth = target_depth + dx / 2
+
+    diff = np.abs(depth_array - target_model_depth)
+
+    ix = np.where(diff == diff.min())[0]
+
+    return ix[-1]   # choose deeper if tie
 
 def save_fig(fig, output_dir, lake_key, name):
     fig.tight_layout()
@@ -227,7 +234,7 @@ def post_process(
                     color='red',
                     linestyle='solid',
                     marker='o',
-                    zorder=5,
+                    zorder=2,
                     label=f"{int(surf_depth)}m Observed DO")
 
             if not df_obs_deep.empty:
