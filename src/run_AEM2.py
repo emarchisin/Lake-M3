@@ -267,6 +267,7 @@ for lake_num in range(1, num_lakes + 1):
         postprocess_config=postprocess_config,
         lake_key=lake_key,
         driver_dir=driver_dir,
+        carbon_data=carbon,
         observations_dir=observations_dir,
         startDate=startingDate,
         endDate=endingDate,
