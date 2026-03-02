@@ -21,7 +21,7 @@ from pathlib import Path
 # os.chdir('/Users/paul/Dropbox/Hanson/MyModels/1D-AEMpy-UW-metabolism-EM/src')
 # os.chdir('/Users/au740615/Documents/projects/1D-AEMpy-UW-metabolism-EM/src')
 
-lake_dir=Path('Project/Example-EM')
+lake_dir=Path('../Project/Example-EM')
 
 config_dir=lake_dir/"Config"
 driver_dir=lake_dir/"Drivers"
