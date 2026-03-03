@@ -1,23 +1,23 @@
 #new
 import numpy as np
 import pandas as pd
-import os
+# import os
 #import scipy
-from math import pi, exp, sqrt
-from scipy.interpolate import interp1d
+# from math import pi, exp, sqrt
+# from scipy.interpolate import interp1d
 from copy import deepcopy
 import datetime
-import matplotlib.pyplot as plt
-import seaborn as sns
-from numba import jit
-from functools import reduce
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+# from numba import jit
+# from functools import reduce
 from pathlib import Path
-import sys
+# import sys
 
 #******To use: set main directory and change lake_dir path for desired Project
 
 # os.chdir("/Users/emmamarchisin/Desktop/Research/Code/1D-AEMpy-UW-metabolism-EM/src")
-os.chdir("/Users/emmamarchisin/Desktop/Research/Code/Lake-M3/src")
+# os.chdir("/Users/emmamarchisin/Desktop/Research/Code/Lake-M3/src")
 # os.chdir('/Users/paul/Dropbox/Hanson/MyModels/1D-AEMpy-UW-metabolism-EM/src')
 # os.chdir('/Users/au740615/Documents/projects/1D-AEMpy-UW-metabolism-EM/src')
 
@@ -192,9 +192,9 @@ for lake_num in range(1, num_lakes + 1):
         # add another parameter for this.
         resp_docr=model_params["resp_docr"]/86400,
         resp_docl=model_params["resp_docl"]/86400,
-        resp_pocr=model_params["resp_poc"]/86400/0.1,
-        resp_pocl=model_params["resp_poc"]/86400,
-        resp_poc=model_params["resp_poc"]/86400,
+        resp_pocr=model_params["resp_pocr"]/86400,
+        resp_pocl=model_params["resp_pocl"]/86400,
+        resp_poc=model_params["resp_pocl"]/86400,
         sed_sink=model_params["sed_sink"]/86400,
         settling_rate_labile=model_params["settling_rate_labile"]/86400,
         settling_rate_refractory=model_params['settling_rate_refractory']/86400,
@@ -267,6 +267,7 @@ for lake_num in range(1, num_lakes + 1):
         postprocess_config=postprocess_config,
         lake_key=lake_key,
         driver_dir=driver_dir,
+        carbon_data=carbon,
         observations_dir=observations_dir,
         startDate=startingDate,
         endDate=endingDate,

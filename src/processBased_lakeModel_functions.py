@@ -6,19 +6,19 @@ from scipy.interpolate import interp1d
 from copy import deepcopy
 import datetime
 from ancillary_functions import calc_cc, buoyancy_freq, center_buoyancy
-import random 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from collections import OrderedDict
+# import random 
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
+# import seaborn as sns
+# import matplotlib.pyplot as plt
+# from sklearn.model_selection import train_test_split
+# from sklearn.preprocessing import StandardScaler
+# from collections import OrderedDict
 from tqdm import tqdm
 import warnings
 warnings.filterwarnings("ignore")
-from numba import jit
+# from numba import jit
 from scipy.linalg import solve_banded
 from scipy.stats.stats import pearsonr
 from scipy.sparse.linalg import spsolve
@@ -4067,6 +4067,7 @@ def run_wq_model(
         Jsw = Jsw(n),
         Jlw = Jlw(n),
         Uw = Uw(n),
+        Hgeo=Hgeo,
         Pa= Pa(n),
         RH = RH(n),
         kd_light = kd_light,

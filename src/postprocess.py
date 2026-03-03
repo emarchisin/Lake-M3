@@ -112,6 +112,7 @@ def post_process(
     lake_key,
     driver_dir,
     observations_dir,
+    carbon_data,
     startDate,
     depth,
     endDate,
@@ -290,6 +291,7 @@ def post_process(
                     color='red',
                     linestyle='solid',
                     marker='o',
+                    markersize=2,
                     zorder=5,
                     label=f"{int(surf_depth)}m Observed Temp")
 
@@ -300,6 +302,7 @@ def post_process(
                     color='red',
                     linestyle='dashed',
                     marker='o',
+                    markersize=2,
                     zorder=5,
                     label=f"{int(deep_depth)}m Observed Temp")
 
@@ -469,12 +472,12 @@ def post_process(
             (docr * docr_resp) +
             (pocl * poc_resp) +
             (pocr * poc_resp)) #g/d per layer
-        r_layer_m3=r_layer/volume[:,None]
+        r_layer_m2=r_layer/area[:,None]
         
         gpp_layer=npp #g/d per layer
-        gpp_layer_m3=gpp_layer/volume[:,None]
+        gpp_layer_m2=gpp_layer/area[:,None]
         nep_layer=gpp_layer-r_layer
-        nep_layer_m3=(nep_layer)/volume[:,None]
+        nep_layer_m2=(nep_layer)/area[:,None]
         
         total_r=np.sum(r_layer,axis=0) #g/d lake
         total_gpp=np.sum(gpp_layer,axis=0) #g/d lake
@@ -512,26 +515,26 @@ def post_process(
 
         if is_on(postprocess_config, lake_key, "integrated_gpp"):
             plot_integrated(
-                gpp_layer_m3,
+                gpp_layer_m2,
                 integrated_gpp,
-                "Integrated GPP (g m⁻3 d⁻¹)",
+                "Integrated GPP (g m⁻2 d⁻¹)",
                 "integrated_gpp"
             )
 
         if is_on(postprocess_config, lake_key, "integrated_r"):
             plot_integrated(
-                r_layer_m3,
+                r_layer_m2,
                 integrated_r,
-                "Integrated R (g m⁻3 d⁻¹)",
+                "Integrated R (g m⁻2 d⁻¹)",
                 "integrated_r"
             )
             
         if is_on(postprocess_config, lake_key, "integrated_nep"):
-            v = np.nanmax(np.abs(nep_layer_m3))
+            v = np.nanmax(np.abs(nep_layer_m2))
             plot_integrated(
-                nep_layer_m3,
+                nep_layer_m2,
                 integrated_nep,
-                "Integrated NEP (g m⁻3 d⁻¹)",
+                "Integrated NEP (g m⁻2 d⁻¹)",
                 "integrated_nep",
                 vmin=-v,
                 vmax=v
@@ -543,7 +546,11 @@ def post_process(
     target_depth = 1.0
     ix_1m = depth_to_index(depth, target_depth)
     temp_1m = temp[ix_1m, :] 
-    npp_1m = npp[ix_1m, :] / volume[ix_1m]
+    # npp_1m = npp[ix_1m, :] / area[ix_1m]gpp_layer=npp #g/d per layer
+    gpp_layer_m2=gpp_layer/area[:,None]
+    total_gpp=np.sum(gpp_layer,axis=0) #g/d lake
+    lake_area=np.max(area) #m2
+    integrated_gpp = total_gpp/lake_area #g/m2/d    
     do_1m  = o2[ix_1m, :] / volume[ix_1m]
     doc_1m = doc_total[ix_1m, :] / volume[ix_1m]
     poc_1m = poc_total[ix_1m, :] / volume[ix_1m]
@@ -554,20 +561,20 @@ def post_process(
     def plot_driver_panels(light, temp, tp, response, ylabel, fname):
 
         fig, ax = plt.subplots(3, 1, figsize=(6, 10))   
-        ax[0].scatter(light, response, alpha=0.4)
+        ax[0].scatter(light, response, alpha=0.4, s=2)
         ax[0].set_xlabel("Shortwave (W/m2)")
         ax[0].set_ylabel(ylabel)    
-        ax[1].scatter(temp, response, alpha=0.4)
+        ax[1].scatter(temp, response, alpha=0.4, s=2)
         ax[1].set_xlabel("Temperature (°C)")
         ax[1].set_ylabel(ylabel)    
-        ax[2].scatter(tp, response, alpha=0.4)
+        ax[2].scatter(tp, response, alpha=0.4,s=2)
         ax[2].set_xlabel("TP (ug/L)")
         ax[2].set_ylabel(ylabel)    
         plt.tight_layout()
         save_fig(fig, lake_output_dir, lake_key, fname)
         
-    if is_on(postprocess_config, lake_key, 'npp_driver_panels'):
-        plot_driver_panels(light, temp_1m, tp, npp_1m, "NPP", "npp_driver_panels")
+    if is_on(postprocess_config, lake_key, 'gpp_driver_panels'):
+        plot_driver_panels(light, temp_1m, tp, integrated_gpp, "Integrated GPP (g/m2/d)", "gpp_driver_panels")
     
     if is_on(postprocess_config, lake_key, 'do_driver_panels'):
         plot_driver_panels(light, temp_1m, tp, do_1m, "DO (mg/L)", "do_driver_panels")
@@ -578,7 +585,46 @@ def post_process(
     if is_on(postprocess_config, lake_key, 'poc_driver_panels'):
         plot_driver_panels(light, temp_1m, tp, poc_1m, "POC (mg/L)", "poc_driver_panels")
 
+#Carbon loading and TP
 
+    if is_on(postprocess_config, lake_key, "driver_load_panel"):
+
+        if carbon_data is None:
+            print("Warning: carbon_data not provided")
+    
+        else:
+    
+            # cut down file to match datetime
+            carbon_data["datetime"] = pd.to_datetime(carbon_data["datetime"])
+            df_time = pd.DataFrame({"datetime": times})
+            merged = df_time.merge(
+                carbon_data[["datetime", "discharge", "hourly_carbon"]],
+                on="datetime",
+                how="left"
+            )
+    
+            discharge = merged["discharge"].values #m3/d
+            oc_load   = merged["hourly_carbon"].values #g/hour
+            lake_area = np.max(area) #m2
+            carbon_g_m2_day=(oc_load*24)/lake_area #g/m2/day
+
+            tp = np.asarray(res.get("TP", np.zeros_like(discharge))).squeeze()
+            tp=tp*1000 #mg/L -> ug/L
+    
+            fig, ax = plt.subplots(3, 1, figsize=(12, 8), sharex=True)
+    
+            ax[0].plot(times, discharge, color="steelblue")
+            ax[0].set_ylabel("Discharge (m3/day)")
+    
+            ax[1].plot(times, carbon_g_m2_day, color="darkorange")
+            ax[1].set_ylabel("OC Load (g/m2/day)")
+    
+            ax[2].plot(times, tp, color="forestgreen")
+            ax[2].set_ylabel("TP (ug/L)")
+            ax[2].set_xlabel("Time")
+    
+            plt.tight_layout()
+            save_fig(fig, lake_output_dir, lake_key, "driver_load_panel")
 #FM_ Lake files
 
 
