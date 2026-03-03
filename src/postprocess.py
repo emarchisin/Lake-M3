@@ -291,6 +291,7 @@ def post_process(
                     color='red',
                     linestyle='solid',
                     marker='o',
+                    markersize=2,
                     zorder=5,
                     label=f"{int(surf_depth)}m Observed Temp")
 
@@ -301,6 +302,7 @@ def post_process(
                     color='red',
                     linestyle='dashed',
                     marker='o',
+                    markersize=2,
                     zorder=5,
                     label=f"{int(deep_depth)}m Observed Temp")
 
@@ -470,12 +472,12 @@ def post_process(
             (docr * docr_resp) +
             (pocl * poc_resp) +
             (pocr * poc_resp)) #g/d per layer
-        r_layer_m3=r_layer/volume[:,None]
+        r_layer_m2=r_layer/area[:,None]
         
         gpp_layer=npp #g/d per layer
-        gpp_layer_m3=gpp_layer/volume[:,None]
+        gpp_layer_m2=gpp_layer/area[:,None]
         nep_layer=gpp_layer-r_layer
-        nep_layer_m3=(nep_layer)/volume[:,None]
+        nep_layer_m2=(nep_layer)/area[:,None]
         
         total_r=np.sum(r_layer,axis=0) #g/d lake
         total_gpp=np.sum(gpp_layer,axis=0) #g/d lake
@@ -513,7 +515,7 @@ def post_process(
 
         if is_on(postprocess_config, lake_key, "integrated_gpp"):
             plot_integrated(
-                gpp_layer_m3,
+                gpp_layer_m2,
                 integrated_gpp,
                 "Integrated GPP (g m⁻2 d⁻¹)",
                 "integrated_gpp"
@@ -521,16 +523,16 @@ def post_process(
 
         if is_on(postprocess_config, lake_key, "integrated_r"):
             plot_integrated(
-                r_layer_m3,
+                r_layer_m2,
                 integrated_r,
                 "Integrated R (g m⁻2 d⁻¹)",
                 "integrated_r"
             )
             
         if is_on(postprocess_config, lake_key, "integrated_nep"):
-            v = np.nanmax(np.abs(nep_layer_m3))
+            v = np.nanmax(np.abs(nep_layer_m2))
             plot_integrated(
-                nep_layer_m3,
+                nep_layer_m2,
                 integrated_nep,
                 "Integrated NEP (g m⁻2 d⁻¹)",
                 "integrated_nep",
@@ -555,13 +557,13 @@ def post_process(
     def plot_driver_panels(light, temp, tp, response, ylabel, fname):
 
         fig, ax = plt.subplots(3, 1, figsize=(6, 10))   
-        ax[0].scatter(light, response, alpha=0.4, s=10)
+        ax[0].scatter(light, response, alpha=0.4, s=2)
         ax[0].set_xlabel("Shortwave (W/m2)")
         ax[0].set_ylabel(ylabel)    
-        ax[1].scatter(temp, response, alpha=0.4, s=10)
+        ax[1].scatter(temp, response, alpha=0.4, s=2)
         ax[1].set_xlabel("Temperature (°C)")
         ax[1].set_ylabel(ylabel)    
-        ax[2].scatter(tp, response, alpha=0.4,s=10)
+        ax[2].scatter(tp, response, alpha=0.4,s=2)
         ax[2].set_xlabel("TP (ug/L)")
         ax[2].set_ylabel(ylabel)    
         plt.tight_layout()

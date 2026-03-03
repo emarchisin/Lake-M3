@@ -4065,6 +4065,7 @@ def run_wq_model(
         Jsw = Jsw(n),
         Jlw = Jlw(n),
         Uw = Uw(n),
+        Hgeo=Hgeo,
         Pa= Pa(n),
         RH = RH(n),
         kd_light = kd_light,

@@ -192,9 +192,9 @@ for lake_num in range(1, num_lakes + 1):
         # add another parameter for this.
         resp_docr=model_params["resp_docr"]/86400,
         resp_docl=model_params["resp_docl"]/86400,
-        resp_pocr=model_params["resp_poc"]/86400/0.1,
-        resp_pocl=model_params["resp_poc"]/86400,
-        resp_poc=model_params["resp_poc"]/86400,
+        resp_pocr=model_params["resp_pocr"]/86400,
+        resp_pocl=model_params["resp_pocl"]/86400,
+        resp_poc=model_params["resp_pocl"]/86400,
         sed_sink=model_params["sed_sink"]/86400,
         settling_rate_labile=model_params["settling_rate_labile"]/86400,
         settling_rate_refractory=model_params['settling_rate_refractory']/86400,
