@@ -546,7 +546,11 @@ def post_process(
     target_depth = 1.0
     ix_1m = depth_to_index(depth, target_depth)
     temp_1m = temp[ix_1m, :] 
-    npp_1m = npp[ix_1m, :] / area[ix_1m]
+    # npp_1m = npp[ix_1m, :] / area[ix_1m]gpp_layer=npp #g/d per layer
+    gpp_layer_m2=gpp_layer/area[:,None]
+    total_gpp=np.sum(gpp_layer,axis=0) #g/d lake
+    lake_area=np.max(area) #m2
+    integrated_gpp = total_gpp/lake_area #g/m2/d    
     do_1m  = o2[ix_1m, :] / volume[ix_1m]
     doc_1m = doc_total[ix_1m, :] / volume[ix_1m]
     poc_1m = poc_total[ix_1m, :] / volume[ix_1m]
@@ -569,8 +573,8 @@ def post_process(
         plt.tight_layout()
         save_fig(fig, lake_output_dir, lake_key, fname)
         
-    if is_on(postprocess_config, lake_key, 'npp_driver_panels'):
-        plot_driver_panels(light, temp_1m, tp, npp_1m, "NPP (g/m2/d)", "npp_driver_panels")
+    if is_on(postprocess_config, lake_key, 'gpp_driver_panels'):
+        plot_driver_panels(light, temp_1m, tp, integrated_gpp, "Integrated GPP (g/m2/d)", "gpp_driver_panels")
     
     if is_on(postprocess_config, lake_key, 'do_driver_panels'):
         plot_driver_panels(light, temp_1m, tp, do_1m, "DO (mg/L)", "do_driver_panels")
