@@ -734,11 +734,11 @@ def post_process(
     
         fm_driver = pd.DataFrame({
             "datetime": times,
-            "Shortwave_Wm2": meteo[4, :],
-            "sum_Longwave_Radiation_Downwelling_wattPerMeterSquared": meteo[1, :],
-            "AirTemp_C": meteo[0, :],
-            "median_Ten_Meter_Elevation_Wind_Speed_meterPerSecond": meteo[12, :],
-            "sum_Precipitation_millimeterPerDay": meteo[15, :],
+            "Shortwave_Radiation_Downwelling_wattPerMeterSquared": meteo_all["Shortwave_Radiation_Downwelling_wattPerMeterSquared"].values,
+            "Longwave_Radiation_Flux_Downwelling_wattPerMeterSquared": meteo_all["Longwave_Radiation_Downwelling_wattPerMeterSquared"].values,
+            "Air_Temperature_celsius": meteo_all["Air_Temperature_celsius"].values,
+            "Ten_Meter_Elevation_Wind_Speed_meterPerSecond": meteo_all["Ten_Meter_Elevation_Wind_Speed_meterPerSecond"].values,
+            "Precipitation_millimeterPerDay": meteo_all["Precipitation_millimeterPerDay"].values,
             "Water_Secchi_m": secchi.flatten(),
             "TP_load_ug_per_L": TP.flatten(),})
     
