@@ -734,11 +734,11 @@ def post_process(
     
         fm_driver = pd.DataFrame({
             "datetime": times,
-            "Shortwave_Radiation_Downwelling_wattPerMeterSquared": meteo_all["Shortwave_Radiation_Downwelling_wattPerMeterSquared"].values,
-            "Longwave_Radiation_Flux_Downwelling_wattPerMeterSquared": meteo_all["Longwave_Radiation_Downwelling_wattPerMeterSquared"].values,
-            "Air_Temperature_celsius": meteo_all["Air_Temperature_celsius"].values,
-            "Ten_Meter_Elevation_Wind_Speed_meterPerSecond": meteo_all["Ten_Meter_Elevation_Wind_Speed_meterPerSecond"].values,
-            "Precipitation_millimeterPerDay": meteo_all["Precipitation_millimeterPerDay"].values,
+            "Shortwave_Radiation_Downwelling_wattPerMeterSquared": meteo_all["Shortwave_Radiation_Downwelling_wattPerMeterSquared"].values, #input file
+            "Longwave_Flux_wattPerMeterSquared": meteo[1, :], #flux calculated in heating res 
+            "Air_Temperature_celsius": meteo_all["Air_Temperature_celsius"].values, #input file
+            "Ten_Meter_Elevation_Wind_Speed_meterPerSecond": meteo_all["Ten_Meter_Elevation_Wind_Speed_meterPerSecond"].values, #added windfactor
+            "Precipitation_millimeterPerDay": meteo_all["Precipitation_millimeterPerDay"].values,#input file
             "Water_Secchi_m": secchi.flatten(),
             "TP_load_ug_per_L": TP.flatten(),})
     
@@ -750,16 +750,16 @@ def post_process(
         if is_on(postprocess_config, lake_key, "fm_driver_daily"):
             fm_driver["Date"] = fm_driver["datetime"].dt.floor("D")
             sum_vars = [
-                "sum_Longwave_Radiation_Downwelling_wattPerMeterSquared",
-                "sum_Precipitation_millimeterPerDay",
+                "Longwave_Flux_wattPerMeterSquared",
+                "Precipitation_millimeterPerDay",
                 "TP_load_ug_per_L"]
                 # "TOC_load_g_per_d",
                 # "Discharge_m3_per_d"]
     
             median_vars = [
-                "Shortwave_Wm2",
-                "AirTemp_C",
-                "median_Ten_Meter_Elevation_Wind_Speed_meterPerSecond",
+                "hortwave_Radiation_Downwelling_wattPerMeterSquared",
+                "Air_Temperature_celsius",
+                "Ten_Meter_Elevation_Wind_Speed_meterPerSecond",
                 "Water_Secchi_m"]
     
             fm_driver_daily = (fm_driver.groupby("Date")
