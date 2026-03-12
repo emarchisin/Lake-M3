@@ -757,7 +757,7 @@ def post_process(
                 # "Discharge_m3_per_d"]
     
             median_vars = [
-                "Shortwave_Radiation_Downwelling_wattPerMeterSquared",
+                "hortwave_Radiation_Downwelling_wattPerMeterSquared",
                 "Air_Temperature_celsius",
                 "Ten_Meter_Elevation_Wind_Speed_meterPerSecond",
                 "Water_Secchi_m"]

@@ -1725,7 +1725,7 @@ def boundary_module(
     
     
     if ice:
-        piston_velocity = 1e-5 / 86400
+        #piston_velocity = 1e-5 / 86400
         IP_m = IP / 10
     else:
         #breakpoint()
@@ -1827,7 +1827,7 @@ def prodcons_module_woDOCL(
         o2_to_chla = 41.5/3600,
         prop_I_npp = 0.3,
         k_TP=0.06,
-        beta = 0.9): 
+        beta = 0.8): 
 
     
     ## (1) HEAT ADDITION
@@ -1958,7 +1958,6 @@ def prodcons_module_woDOCL(
         #P_max = 1.5 * 10**(-6) # mol C/m2/s
         alpha_P = 0.03 # mol C per mol photon
         #LIGHTUSEBYPHOTOS = 0.3 # proportion of the ambient light taken up by phytos
-        p_max = 0.2/86400
 
         P_I = p_max * (1 - exp(- (alpha_P*prop_I_npp) * PAR/p_max)) # mol C/m2/s
 
@@ -3260,8 +3259,7 @@ def boundary_module_oxygen(
     
     
     if ice:
-        #piston_velocity = 1e-5 / 86400
-        piston_velocity = 0.1/86400
+        piston_velocity = 1e-5 / 86400
         IP_m = IP / 10
     else:
         #breakpoint()
