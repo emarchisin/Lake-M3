@@ -218,22 +218,28 @@ def provide_meteorology(meteofile, windfactor, lat, lon, elev, startDate, endDat
     return(daily_meteo)
 
 def provide_phosphorus(tpfile, startingDate, startTime):
+    
     phos = pd.read_csv(tpfile)
+
     phos['tp']=phos['tp']/1000 #conversion from ug/L to mg/L
     daily_tp = phos.copy()
-    daily_tp['date'] = pd.to_datetime(daily_tp['datetime'])
     
+    daily_tp['date'] = pd.to_datetime(daily_tp['datetime'])
+
     daily_tp['ditt'] = abs(daily_tp['date'] - startingDate)
     daily_tp = daily_tp.loc[daily_tp['date'] >= startingDate]
+    daily_tp=daily_tp[daily_tp['layer']=='epi']
     if startingDate < daily_tp['date'].min():
         daily_tp.loc[-1] = [startingDate, 'epi', daily_tp['tp'].iloc[0], startingDate, daily_tp['ditt'].iloc[0]]  # adding a row
         daily_tp.index = daily_tp.index + 1  # shifting index
         daily_tp.sort_index(inplace=True) 
+    
         #daily_tp['dt'] = (daily_tp['date'] - daily_tp['date'].iloc[0]).astype('timedelta64[s]') + startTime 
     # time_diff = daily_tp['date'] - daily_tp['date'].iloc[0]
     # daily_tp['dt'] = time_diff.dt.total_seconds() + startTime
     time_diff = (daily_tp['date'] - daily_tp['date'].iloc[0]).astype('timedelta64[s]') #RL init cond change
     daily_tp['dt'] =time_diff.dt.total_seconds() + startTime
+    
     return(daily_tp)
 
 
