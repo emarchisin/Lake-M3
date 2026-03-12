@@ -70,20 +70,39 @@ def calc_dens(wtemp):
       (6.536336 * 1e-9 * wtemp**5))
     return dens
 
-def melt_var(var, times, depth, name):
-    df = pd.DataFrame(var.T, index=times)
-    df["datetime"] = times
+# def melt_var(var, times, depth, name):
+#     df = pd.DataFrame(var.T, index=times)
+#     df["datetime"] = times
 
-    df_long = df.melt(
-        id_vars="datetime",
-        var_name="depth_index",
-        value_name=name
-    )
+#     df_long = df.melt(
+#         id_vars="datetime",
+#         var_name="depth_index",
+#         value_name=name
+#     )
 
-    df_long["depth"] = df_long["depth_index"].apply(lambda i: depth[int(i)])
-    df_long = df_long.drop(columns=["depth_index"])
+#     df_long["depth"] = df_long["depth_index"].apply(lambda i: depth[int(i)])
+#     df_long = df_long.drop(columns=["depth_index"])
 
-    return df_long
+#     return df_long
+
+def melt_var(arr_2d, datetimes, depth, varname):
+
+    arr_2d = np.asarray(arr_2d)
+
+    # force shape (depth , time)
+    if arr_2d.shape == (len(datetimes), len(depth)):
+        arr_2d = arr_2d.T
+
+    assert arr_2d.shape == (len(depth), len(datetimes)), \
+        f"{varname} shape mismatch {arr_2d.shape}"
+
+    df = pd.DataFrame({
+        "datetime": np.repeat(datetimes, len(depth)),
+        "depth": np.tile(depth, len(datetimes)),
+        varname: arr_2d.flatten(order="F")
+    })
+
+    return df
 
 def get_plot_depths(config, lake_key, varname):
     surf_key=f"surf_depth_{varname}"
@@ -235,6 +254,7 @@ def post_process(
                     color='red',
                     linestyle='solid',
                     marker='o',
+                    markersize=2,
                     zorder=2,
                     label=f"{int(surf_depth)}m Observed DO")
 
@@ -245,6 +265,7 @@ def post_process(
                     color='red',
                     linestyle='dashed',
                     marker='o',
+                    markersize=2,
                     zorder=5,
                     label=f"{int(deep_depth)}m Observed DO")
 
@@ -379,6 +400,7 @@ def post_process(
                             color="red",
                             linestyle="solid",
                             marker="o",
+                            markersize=2,
                             zorder=5,
                             label=f"{int(surf_depth)}m Observed")
         
@@ -389,6 +411,7 @@ def post_process(
                             color="red",
                             linestyle="dashed",
                             marker="o",
+                            markersize=2,
                             zorder=5,
                             label=f"{int(deep_depth)}m Observed")
             ax.set_ylabel(f"{varname} (mg/L)")
@@ -632,14 +655,23 @@ def post_process(
         is_on(postprocess_config, lake_key, "fm_lake_daily")):
     
         def melt_var(arr_2d, datetimes, depth, varname):
+
             arr_2d = np.asarray(arr_2d)
-            if arr_2d.shape[0] == len(datetimes) and arr_2d.shape[1] == len(depth):
+        
+            # force shape (depth , time)
+            if arr_2d.shape == (len(datetimes), len(depth)):
                 arr_2d = arr_2d.T
-            n_depths, n_times = arr_2d.shape
-            return pd.DataFrame({
-                "datetime": np.repeat(datetimes, n_depths),
-                "depth": np.tile(depth, n_times),
-                varname: arr_2d.flatten()})
+        
+            assert arr_2d.shape == (len(depth), len(datetimes)), \
+                f"{varname} shape mismatch {arr_2d.shape}"
+        
+            df = pd.DataFrame({
+                "datetime": np.repeat(datetimes, len(depth)),
+                "depth": np.tile(depth, len(datetimes)),
+                varname: arr_2d.flatten(order="F")
+            })
+        
+            return df
     
         temp = res["temp"]
         o2 = res["o2"] / volume[:, None]
