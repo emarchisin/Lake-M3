@@ -677,16 +677,41 @@ def post_process(
         o2 = res["o2"] / volume[:, None]
         doc = (res["docl"] + res["docr"]) / volume[:, None]
         poc = (res["pocl"] + res["pocr"]) / volume[:, None]
+        
+        r_layer = (
+            (docl * docl_resp) +
+            (docr * docr_resp) +
+            (pocl * poc_resp) +
+            (pocr * poc_resp))  # g/d per layer
+        
+        r_layer_m2 = r_layer / area[:, None] #g/m2/d
+        
+        gpp_layer = npp  # g/d per layer
+        gpp_layer_m2 = gpp_layer / area[:, None] #g/m2/d
+        
+        nep_layer = gpp_layer - r_layer #g/d per layer
+        nep_layer_m2 = nep_layer / area[:, None] #g/m2/d
+        
+
     
         dfs = [
             melt_var(temp, times, depth, "WaterTemp_C"),
             melt_var(o2, times, depth, "Water_DO_mg_per_L"),
             melt_var(doc, times, depth, "Water_DOC_mg_per_L"),
-            melt_var(poc, times, depth, "Water_POC_mg_per_L"),]
+            melt_var(poc, times, depth, "Water_POC_mg_per_L"),
+            melt_var(r_layer, times, depth, "Resp_g_per_day"),
+            melt_var(r_layer_m2, times, depth, "Resp_g_per_m2_day"),
+            melt_var(gpp_layer, times, depth, "GPP_g_per_day"),
+            melt_var(gpp_layer_m2, times, depth, "GPP_g_per_m2_day"),  
+            melt_var(nep_layer, times, depth, "NEP_g_per_day"),
+            melt_var(nep_layer_m2, times, depth, "NEP_g_per_m2_day"),
+]
     
         fm_lake = dfs[0]
         for df in dfs[1:]:
             fm_lake = fm_lake.merge(df, on=["datetime", "depth"], how="left")
+            
+        fm_lake["depth"] = fm_lake["depth"] - 0.25
         
         #hourly
         if is_on(postprocess_config, lake_key, "fm_lake_hourly"):
@@ -705,7 +730,7 @@ def post_process(
     
         meteo = res["meteo_input"]
         secchi = res["secchi"]
-        TPm = res.get("TPm", np.zeros_like(secchi))
+        TP = res.get("TP", np.zeros_like(secchi))
     
         fm_driver = pd.DataFrame({
             "datetime": times,
@@ -715,7 +740,7 @@ def post_process(
             "median_Ten_Meter_Elevation_Wind_Speed_meterPerSecond": meteo[12, :],
             "sum_Precipitation_millimeterPerDay": meteo[15, :],
             "Water_Secchi_m": secchi.flatten(),
-            "TP_load_ug_per_L": TPm.flatten(),})
+            "TP_load_ug_per_L": TP.flatten(),})
     
         #hourly
         if is_on(postprocess_config, lake_key, "fm_driver_hourly"):
