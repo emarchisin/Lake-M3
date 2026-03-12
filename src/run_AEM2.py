@@ -88,7 +88,7 @@ for lake_num in range(1, num_lakes + 1):
     meteo_all = provide_meteorology(meteofile = driver_dir/run_config["meteo_ini_file"], 
                     windfactor = windfactor, lat = lake_config["Latitude"], lon = lake_config["Longitude"], elev = lake_config["Elevation"],
                     startDate = startingDate, endDate=endingDate)
-                     
+           
     atm_flux_output = np.zeros(nTotalSteps,) 
     u_ini = initial_profile(initfile = driver_dir/run_config["u_ini_file"], nx = nx, dx = dx,
                      depth = depth,

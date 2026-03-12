@@ -3912,7 +3912,9 @@ def run_wq_model(
   PP = interp1d(daily_meteo.dt.values, daily_meteo.Precipitation_millimeterPerDay.values, kind = "linear", fill_value=PP_fillvals, bounds_error=False)
   TP_fillvals = tuple(phosphorus_data.tp.values[[0,-1]])
   TP = interp1d(phosphorus_data.dt.values, phosphorus_data.tp.values, kind = "linear", fill_value=TP_fillvals, bounds_error=False)
-
+  # print(daily_meteo.dt.head())
+  # print(RH(0))
+  # print(Jlw(0))
 #carbon interpol
   carbon_fillvals = tuple(oc_load_input.hourly_carbon.values[[0,-1]])
   carbon = interp1d(oc_load_input['dt'].values, oc_load_input['hourly_carbon'].values,
