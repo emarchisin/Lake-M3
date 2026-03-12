@@ -769,3 +769,89 @@ def post_process(
                     }).reset_index())
     
             fm_driver_daily.to_csv(lake_output_dir / f"{lake_key}_fm_driver_daily.csv",index=False)
+
+#Emma Thesis Output
+
+
+    if is_on(postprocess_config, lake_key, "emma_thesis"):
+ 
+        temp = res["temp"]
+        o2 = res["o2"] / volume[:, None]
+        poc = (res["pocl"] + res["pocr"]) / volume[:, None]
+    
+        def melt_var(arr_2d, datetimes, depth, varname):
+
+            arr_2d = np.asarray(arr_2d)
+        
+            # force shape (depth , time)
+            if arr_2d.shape == (len(datetimes), len(depth)):
+                arr_2d = arr_2d.T
+        
+            assert arr_2d.shape == (len(depth), len(datetimes)), \
+                f"{varname} shape mismatch {arr_2d.shape}"
+        
+            df = pd.DataFrame({
+                "datetime": np.repeat(datetimes, len(depth)),
+                "depth": np.tile(depth, len(datetimes)),
+                varname: arr_2d.flatten(order="F")
+            })
+        
+            return df
+    
+        temp_df = melt_var(temp, times, depth, "Water_Temp_filled")
+        do_df = melt_var(o2, times, depth, "DO_filled")
+        poc_df = melt_var(poc, times, depth, "poc")
+    
+        lake_df = temp_df.merge(do_df, on=["datetime","depth"])
+        lake_df = lake_df.merge(poc_df, on=["datetime","depth"])
+
+        # convert layer center depth to actual depth
+        lake_df["depth"] = lake_df["depth"] - 0.25
+        
+        # keep only the 1 m layer
+        lake_df = lake_df[np.abs(lake_df["depth"] - 1.0) < 1e-6]
+
+        meteo = res["meteo_input"]
+        secchi = res["secchi"]
+        TP = res.get("TP", np.zeros_like(secchi))
+    
+        driver_df = pd.DataFrame({
+            "datetime": times,
+            "Air_Temperature_celsius": meteo[0,:],
+            "Shortwave_Radiation_Downwelling_wattPerMeterSquared": meteo[4,:],
+            "Longwave_Radiation_Downwelling_wattPerMeterSquared": meteo[1,:],
+            "Relative_Humidity_percent": meteo[6,:],
+            "Ten_Meter_Elevation_Wind_Speed_meterPerSecond": meteo[12,:],
+            "Precipitation_millimeterPerDay": meteo[15,:],
+            "Surface_Level_Barometric_Pressure_pascal": meteo[9,:],
+            "secchi_m": secchi.flatten(),
+            "tp_ugL": TP.flatten()
+        })
+
+        emma_thesis = driver_df.merge(
+            lake_df.drop(columns="depth"),
+            on="datetime",
+            how="left"
+        )
+    
+        emma_thesis = emma_thesis[
+        [
+        "datetime",
+        "Air_Temperature_celsius",
+        "Shortwave_Radiation_Downwelling_wattPerMeterSquared",
+        "Longwave_Radiation_Downwelling_wattPerMeterSquared",
+        "Relative_Humidity_percent",
+        "Ten_Meter_Elevation_Wind_Speed_meterPerSecond",
+        "Precipitation_millimeterPerDay",
+        "Surface_Level_Barometric_Pressure_pascal",
+        "secchi_m",
+        "tp_ugL",
+        "Water_Temp_filled",
+        "DO_filled",
+        "poc"
+        ]]
+    
+        emma_thesis.to_csv(
+            lake_output_dir / f"{lake_key}_emma_thesis_hourly.csv",
+            index=False
+        )

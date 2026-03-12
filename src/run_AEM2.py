@@ -1,7 +1,7 @@
 #new
 import numpy as np
 import pandas as pd
-# import os
+import os
 #import scipy
 # from math import pi, exp, sqrt
 # from scipy.interpolate import interp1d
@@ -17,11 +17,11 @@ from pathlib import Path
 #******To use: set main directory and change lake_dir path for desired Project
 
 # os.chdir("/Users/emmamarchisin/Desktop/Research/Code/1D-AEMpy-UW-metabolism-EM/src")
-# os.chdir("/Users/emmamarchisin/Desktop/Research/Code/Lake-M3/src")
+os.chdir("/Users/emmamarchisin/Desktop/Research/Code/Lake-M3/src")
 # os.chdir('/Users/paul/Dropbox/Hanson/MyModels/1D-AEMpy-UW-metabolism-EM/src')
 # os.chdir('/Users/au740615/Documents/projects/1D-AEMpy-UW-metabolism-EM/src')
 
-lake_dir=Path('../Project/Example-EM')
+lake_dir=Path('../Project/Thesis-Mendota')
 
 config_dir=lake_dir/"Config"
 driver_dir=lake_dir/"Drivers"
@@ -134,8 +134,8 @@ for lake_num in range(1, num_lakes + 1):
         # MODEL PARAMS - initial conditions
         u=deepcopy(u_ini),  # already read
         o2=deepcopy(wq_ini[0]),  # already read
-        docr=deepcopy(wq_ini[1])*.75, #* 1.3,
-        docl=deepcopy(wq_ini[1])*.25,#1.0 * volume,
+        docr=deepcopy(wq_ini[1])*.90, #* 1.3,
+        docl=deepcopy(wq_ini[1])*.10,#1.0 * volume,
         pocr=0.5 * volume, #0.5
         pocl=0.5 * volume, #0.5
 

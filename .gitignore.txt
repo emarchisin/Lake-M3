@@ -1,0 +1,9 @@
+#Irngore model outputs in project folders
+Project/*/Output/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS junk
+.DS_Store

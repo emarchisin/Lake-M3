@@ -1899,7 +1899,7 @@ def prodcons_module_woDOCL(
         #Production matrix (5x5) <---- EM: Restructure code for ease of viewing
         p = np.zeros((5,5), dtype=float) #Create matrix of 0s
         p[0,0]= npp * oxygen #O2 production from NPP
-        p[1,3]=0.1 * (pocrn * resp_pocr * consumption) #DOC-R from POCr respiration
+        p[1,3]= 0.1 *(pocrn * resp_pocr * consumption) #DOC-R from POCr respiration0.1 *
         p[2,4]= (1-beta) * npp * carbon #DOC-L from NPP; NOT from POCl respiration + small NPP term (pocln * resp_pocl * consumption) +
         p[4,4]=(beta * npp * carbon) #POCl production from NPP
         
@@ -1907,7 +1907,7 @@ def prodcons_module_woDOCL(
         d = np.zeros((5,5), dtype=float) #create matrix of 0s
         d[0,1] = carbon_oxygen * (docrn * resp_docr * consumption) #O2 destroyed from DOCr consumption
         d[0,2] = carbon_oxygen * (docln * resp_docl * consumption) #O2 destroyed from DOCl consumption
-        d[0,3] = 0.9 *carbon_oxygen * (pocrn * resp_pocr * consumption) #O2 destroyed from POCr consumption
+        d[0,3] = 0.9 *carbon_oxygen * (pocrn * resp_pocr * consumption) #O2 destroyed from POCr consumption0.9 *
         d[0,4] = carbon_oxygen * (pocln * resp_pocl * consumption) #O2 destroyed from POCl consumption
         
         #diagonal destruction
