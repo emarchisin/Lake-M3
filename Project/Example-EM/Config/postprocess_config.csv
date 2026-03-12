@@ -34,7 +34,7 @@ integrated_gpp,Yes,Yes
 integrated_r,Yes,No
 integrated_nep,Yes,No
 met_line,No,No
-npp_driver_panels,No,
+gpp_driver_panels,No,
 do_driver_panels,No,
 doc_driver_panels,No,
 poc_driver_panels,No,
