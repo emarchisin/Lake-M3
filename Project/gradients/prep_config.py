@@ -20,6 +20,9 @@ template_lake = pd.read_csv('Project/gradients/base_config/lake_config.csv')
 template_lake.set_index('var', inplace=True)
 base_lake_config = template_lake['Lake1'].to_dict()
 
+# Load the Max Depths Lookup Table ---
+max_depths = pd.read_csv("Project/gradients/drivers/lake_volumes.csv")
+
 # --- Set Run Timing ---
 custom_start_time = "1/1/16 0:00"
 custom_end_time = "1/1/19 0:00"
@@ -90,22 +93,15 @@ for combo in combinations:
     
     lake_name = f"{shape}_{area}ha_{oc}mgl_{rt}yr_{tp_name}_{meteo_name}"
 
-    # Calculate Zmax for lake
-    ref = mean_depth_refs[shape]
-    log_a10, log_a1000 = np.log(10), np.log(1000)
-    log_d10, log_d1000 = np.log(ref[10]), np.log(ref[1000])
-    
-    log_area = np.log(area)
-    log_mean_depth = log_d10 + (log_area - log_a10) * (log_d1000 - log_d10) / (log_a1000 - log_a10)
-    mean_depth = np.exp(log_mean_depth)
-    
-    p = shape_p[shape]
-    z_max = mean_depth * (p + 1)
+    # Get max depth for lake
+    match = max_depths[(max_depths['shape'] == shape) & (max_depths['area_ha'] == area)]
+    z_max = match['zmax'].values[0]
     
     # Update Run Config 
     r_config = base_run_config.copy()
     r_config['start_time'] = custom_start_time
     r_config['end_time'] = custom_end_time
+    r_config['nx'] = round(z_max) * 2 # keeping spatial step constant and .5 m, set spatial extent based on max depth
     r_config['hypso_ini_file'] = f"bath/{shape}_{area}ha.csv"
     r_config['oc_load_file'] = f"oc_load/{shape}_{area}ha_{oc}mgl_{rt}yr.csv"
     r_config['tp_ini_file'] = tp

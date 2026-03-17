@@ -5,10 +5,10 @@ import numpy as np
 high_tp = pd.read_csv("Project/gradients/drivers/tp/high_tp.csv")
 
 #medium TP (50% of mendota)
-high_tp.assign(tp = high_tp["tp"] / 2).to_csv("Project/gradients/drivers/tp/med_tp.csv")
+high_tp.assign(tp = high_tp["tp"] / 2).to_csv("Project/gradients/drivers/tp/med_tp.csv", index=False)
 
 #low TP (10% of mendota)
-high_tp.assign(tp = high_tp["tp"] / 10).to_csv("Project/gradients/drivers/tp/low_tp.csv")
+high_tp.assign(tp = high_tp["tp"] / 10).to_csv("Project/gradients/drivers/tp/low_tp.csv", index=False)
 
 def generate_bathymetry(surface_area_ha, lake_shape):
     """
@@ -74,6 +74,13 @@ def generate_bathymetry(surface_area_ha, lake_shape):
         'Depth_meter': depths,
         'Area_meterSquared': np.round(areas, 2)
     })
+
+    # Drop multiple zero-area rows ---
+    zero_indices = df[df['Area_meterSquared'] == 0].index
+    if len(zero_indices) > 0:
+        # Keep everything up to the first time area hits 0
+        first_zero_idx = zero_indices[0]
+        df = df.loc[:first_zero_idx]
     
     return df
 
@@ -81,7 +88,7 @@ def generate_bathymetry(surface_area_ha, lake_shape):
 shapes = ['dish', 'bowl', 'bucket']
 areas_ha = [10, 100, 1000]
 
-# Initialize a list to hold the volume calculations
+# Initialize a list to hold the volume/max_depth calculations
 volume_data = []
 
 # Generate and save a CSV for each combination
@@ -92,18 +99,21 @@ for shape in shapes:
         # Calculate volume using the trapezoidal rule (integration of Area over Depth)
         # Result is in cubic meters (m^3)
         volume_m3 = np.trapz(y=df_bath['Area_meterSquared'], x=df_bath['Depth_meter'])
+
+        max_depth = df_bath['Depth_meter'].max()
         
         # Add to tracking list
         volume_data.append({
             'shape': shape,
             'area_ha': area,
-            'volume_m3': volume_m3
+            'volume_m3': volume_m3,
+            'zmax': max_depth
         })
 
         # Format the filename
         filename = f"Project/gradients/drivers/bath/{shape}_{area}ha.csv"
         
-        # Save to CSV without the dataframe index
+        # Save to CSV
         df_bath.to_csv(filename, index=False)
 
 # Compile into a master volumes DataFrame and save

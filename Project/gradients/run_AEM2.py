@@ -15,7 +15,7 @@ driver_dir=lake_dir/"drivers"
 
 
 num_lakes = get_num_data_columns(config_dir/"lake_config.csv", "Zmax")
-
+num_lakes = 1
 for lake_num in range(1, num_lakes + 1):   
     lake_config = get_lake_config(config_dir/"lake_config.csv", lake_num)
     model_params = get_model_params(config_dir/"model_params.csv", lake_num)
