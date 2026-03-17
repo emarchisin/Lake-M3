@@ -1,0 +1,16 @@
+var,Lake1
+start_time,2/1/16 1:00
+end_time,8/1/16 0:00
+nx,50
+dt,3600
+dx,0.5
+pgdl_mode,on
+training_data_path,None
+diffusion_method,pacanowskiPhilander
+scheme,implicit
+u_ini_file,temp_init.csv
+wq_ini_file,wq_init.csv
+tp_ini_file,tp/high_tp.csv
+oc_load_file,oc_load/oc_load_file.csv
+hypso_ini_file,bath/bathymetry.csv
+meteo_ini_file,met/temperate_plains_2016-2024.csv
