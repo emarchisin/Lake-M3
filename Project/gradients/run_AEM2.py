@@ -2,16 +2,17 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from pathlib import Path
+import h5py
 
 from processBased_lakeModel_functions import  run_wq_model
 from model_setup import get_hypsography, get_lake_config, get_model_params, get_run_config, get_ice_and_snow , get_num_data_columns, provide_meteorology, initial_profile,  wq_initial_profile, provide_phosphorus, provide_carbon
+from hdf5_functions import save_dict_to_hdf5
 
 lake_dir=Path('Project/gradients')
 
 config_dir=lake_dir/"config"
 driver_dir=lake_dir/"drivers"
-# output_dir=lake_dir/"Output"
-# observations_dir= lake_dir/ "Observations"
+output_dir=lake_dir/"output"
 
 
 num_lakes = get_num_data_columns(config_dir/"lake_config.csv", "Zmax")
@@ -21,7 +22,6 @@ for lake_num in range(1, num_lakes + 1):
     model_params = get_model_params(config_dir/"model_params.csv", lake_num)
     run_config = get_run_config(config_dir/"run_config.csv", lake_num)
     ice_and_snow = get_ice_and_snow(config_dir/"ice_and_snow.csv", lake_num)
-    # postprocess_config=pd.read_csv(config_dir/"postprocess_config.csv", index_col=0)
     
     print(f"=======Running {run_config.name}=======")
     
@@ -195,10 +195,16 @@ for lake_num in range(1, num_lakes + 1):
         meltP=model_params["meltP"],
     )
 
-    # # write out output
-    # lake_key=f"Lake{lake_num}"
-    # lake_output_dir=output_dir/lake_key
-    # lake_output_dir.mkdir(exist_ok=True)
+    res['startTime'] = startingDate
+    res['times'] = times
+    res['nx'] = nx
+
+    # write out output
+    lake_key=f"{run_config.name}"
+    lake_output_dir=output_dir/lake_key
+    lake_output_dir.mkdir(exist_ok=True)
+    with h5py.File(lake_output_dir/f"{run_config.name}.h5", "w") as h5f:
+      save_dict_to_hdf5(h5f, "/", res)
 
 
 
