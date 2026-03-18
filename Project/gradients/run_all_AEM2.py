@@ -5,7 +5,7 @@ from pathlib import Path
 import h5py
 
 from processBased_lakeModel_functions import run_wq_model
-from model_setup import get_hypsography, get_lake_config, get_model_params, get_run_config, get_ice_and_snow , get_num_data_columns, provide_meteorology, initial_profile,  wq_initial_profile, provide_phosphorus, provide_carbon
+from model_setup import get_hypsography, get_lake_config, get_model_params, get_run_config, get_ice_and_snow, get_num_data_columns, provide_meteorology, initial_profile, wq_initial_profile, provide_phosphorus, provide_carbon
 from hdf5_functions import save_dict_to_hdf5
 
 lake_dir = Path('Project/gradients')
@@ -14,19 +14,31 @@ config_dir = lake_dir / "config"
 driver_dir = lake_dir / "drivers"
 output_dir = lake_dir / "output"
 
-# --- MODIFIED: Loop over a list of specific config column names ---
+# Read just the header of the config file to map column names to column indices
+# This creates a list of column names: ['var', 'dish_10ha_1mgl...', ...]
+config_columns = pd.read_csv(config_dir / "lake_config.csv", nrows=0).columns.tolist()
+
+# --- Loop over a list of specific config column names ---
 target_lakes = [
     "dish_10ha_1mgl_1yr_low_tp_coastal_plains",
-    "bowl_10ha_15mgl_5yr_high_tp_western_mountains"
-    # Add or remove lake configuration string IDs here as needed
+    "bowl_100ha_15mgl_5yr_high_tp_western_mountains"
+    # Add your target lake names here
 ]
 
-for lake_name in target_lakes:   
-    # Fetch configurations using the string 'lake_name' instead of 'lake_num'
-    lake_config = get_lake_config(config_dir / "lake_config.csv", lake_name)
-    model_params = get_model_params(config_dir / "model_params.csv", lake_name)
-    run_config = get_run_config(config_dir / "run_config.csv", lake_name)
-    ice_and_snow = get_ice_and_snow(config_dir / "ice_and_snow.csv", lake_name)
+for lake_name in target_lakes:
+    # Check if the requested lake actually exists in the config file
+    if lake_name not in config_columns:
+        print(f"Warning: '{lake_name}' not found in configuration files. Skipping.")
+        continue
+        
+    # Find the integer index of this column (e.g., 'var' is 0, first lake is 1, etc.)
+    lake_num = config_columns.index(lake_name)
+    
+    # Fetch configurations using the integer column index
+    lake_config = get_lake_config(config_dir / "lake_config.csv", lake_num)
+    model_params = get_model_params(config_dir / "model_params.csv", lake_num)
+    run_config = get_run_config(config_dir / "run_config.csv", lake_num)
+    ice_and_snow = get_ice_and_snow(config_dir / "ice_and_snow.csv", lake_num)
     
     print(f"=======Running {run_config.name}=======")
     
@@ -86,14 +98,14 @@ for lake_name in target_lakes:
         startTime=startTime
     )
     carbon = provide_carbon(
-        ocloadfile=driver_dir / run_config["oc_load_file"], # RL: carbon driver?
+        ocloadfile=driver_dir / run_config["oc_load_file"], 
         startingDate=startingDate,
         startTime=startTime
     ).dropna(subset=['oc'])
 
     res = run_wq_model(
         # RUNTIME CONFIG
-        lake_num=lake_name, # Passed the string ID here instead
+        lake_num=lake_num,  # Passed the integer ID back here for any internal logic
         startTime=startingDate,
         endTime=endingDate,
         nx=run_config["nx"],
@@ -106,9 +118,9 @@ for lake_name in target_lakes:
         scheme=run_config["scheme"],
 
         # LAKE CONFIG
-        area=area,  # already read
-        volume=volume,  # already read
-        depth=depth,  # already read
+        area=area,  
+        volume=volume,  
+        depth=depth,  
         zmax=lake_config['Zmax'],
         outflow_depth=lake_config['outflow_depth'],
         mean_depth=sum(volume) / max(area),
@@ -118,12 +130,12 @@ for lake_name in target_lakes:
         long=lake_config['Longitude'],
 
         # MODEL PARAMS - initial conditions
-        u=deepcopy(u_ini),  # already read
-        o2=deepcopy(wq_ini[0]),  # already read
-        docr=deepcopy(wq_ini[1]) * .75, # split apart doc into docr and docl
+        u=deepcopy(u_ini),  
+        o2=deepcopy(wq_ini[0]),  
+        docr=deepcopy(wq_ini[1]) * .75, 
         docl=deepcopy(wq_ini[1]) * .25,
-        pocr=0.5 * volume, #0.5 # set starting pocr and pocl
-        pocl=0.5 * volume, #0.5
+        pocr=0.5 * volume, 
+        pocl=0.5 * volume, 
 
         # meteorology & boundary forcing
         daily_meteo=meteo_all,
@@ -147,9 +159,9 @@ for lake_name in target_lakes:
         km=model_params["km"],
         k0=model_params["k0"],
         weight_kz=model_params["weight_kz"],
-        piston_velocity=model_params["piston_velocity"] / 86400, # seconds in day
+        piston_velocity=model_params["piston_velocity"] / 86400, 
         Cd=model_params["Cd"],
-        hydro_res_time_hr=model_params["hydro_res_time"] * 8760, # hours in year
+        hydro_res_time_hr=model_params["hydro_res_time"] * 8760, 
         W_str=(
             None if pd.isna(model_params["W_str"])
             else model_params["W_str"]
@@ -213,6 +225,7 @@ for lake_name in target_lakes:
     res['depth'] = depth
 
     # write out output
+    # Name the output folder/file using the string descriptive name rather than 'Lake1'
     lake_key = f"{run_config.name}"
     lake_output_dir = output_dir / lake_key
     lake_output_dir.mkdir(exist_ok=True)
