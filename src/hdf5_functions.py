@@ -108,12 +108,18 @@ def load_hdf5_to_dict(h5_item):
             if item.attrs.get("_type") == "datetime_array":
                 # Vectorized byte decoding
                 str_data = np.char.decode(item[()], 'utf-8')
+                
+                # pd.to_datetime naturally returns a pd.DatetimeIndex!
                 parsed_times = pd.to_datetime(str_data)
                 
                 if item.attrs.get("_was_list"):
                     rebuilt_dict[key] = parsed_times.to_list()
                 else:
-                    rebuilt_dict[key] = np.array(parsed_times.to_list(), dtype=object)
+                    # --- THE FIX ---
+                    # Keep it as a native Pandas object. 
+                    # If it's an index, it stays a DatetimeIndex.
+                    # If it's a column, Pandas absorbs it natively as datetime64[ns].
+                    rebuilt_dict[key] = parsed_times
             
             # Handle standard Data
             else:

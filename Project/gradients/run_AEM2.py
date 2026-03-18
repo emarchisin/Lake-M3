@@ -195,9 +195,13 @@ for lake_num in range(1, num_lakes + 1):
         meltP=model_params["meltP"],
     )
 
-    res['startTime'] = startingDate
+    res['starttime'] = startingDate
     res['times'] = times
+    res['dx'] = dx
     res['nx'] = nx
+    res['volume'] = volume
+    res['area'] = area
+    res['depth'] = depth
 
     # write out output
     lake_key=f"{run_config.name}"

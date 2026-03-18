@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import itertools
 
 # --- Read Templates ---
@@ -30,7 +29,7 @@ max_depths = pd.read_csv("Project/gradients/drivers/lake_volumes.csv")
 
 # --- Set Run Timing ---
 custom_start_time = "1/1/16 0:00"
-custom_end_time = "1/1/17 0:00"
+custom_end_time = "1/1/24 0:00"
 
 shapes = ['dish', 'bowl', 'bucket']
 areas = [10, 100, 1000]
