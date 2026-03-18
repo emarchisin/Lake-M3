@@ -72,26 +72,6 @@ def heatmap_plot(data, temp, datetimes, dx, out_dir, lake_key, name=None, ax=Non
         plt.close(fig)
 
     return ax
-
-
-def melt_var(arr_2d, datetimes, depth, varname):
-
-            arr_2d = np.asarray(arr_2d)
-        
-            # force shape (depth , time)
-            if arr_2d.shape == (len(datetimes), len(depth)):
-                arr_2d = arr_2d.T
-        
-            assert arr_2d.shape == (len(depth), len(datetimes)), \
-                f"{varname} shape mismatch {arr_2d.shape}"
-        
-            df = pd.DataFrame({
-                "datetime": np.repeat(datetimes, len(depth)),
-                "depth": np.tile(depth, len(datetimes)),
-                varname: arr_2d.flatten(order="F")
-            })
-        
-            return df
     
 depth_group={
         'docl':'doctot',
@@ -185,42 +165,4 @@ for key in lake_keys:
   ax[2].set_ylabel("Atm Ex (g/m3/d)")
   save_fig(fig, lake_output_dir, key, "rates_panel")     
 
-  # Save out CSV
-  o2 = res["o2"] / volume[:, None]
-  doc = (res["docl"] + res["docr"]) / volume[:, None]
-  poc = (res["pocl"] + res["pocr"]) / volume[:, None]
-        
-  r_layer = (
-            (docl * docl_resp) +
-            (docr * docr_resp) +
-            (pocl * poc_resp) +
-            (pocr * poc_resp))  # g/d per layer
-        
-  r_layer_m2 = r_layer / area[:, None] #g/m2/d
-        
-  gpp_layer = npp  # g/d per layer
-  gpp_layer_m2 = gpp_layer / area[:, None] #g/m2/d
-        
-  nep_layer = gpp_layer - r_layer #g/d per layer
-  nep_layer_m2 = nep_layer / area[:, None] #g/m2/d
-        
-  dfs = [
-            melt_var(temp, times_pd, depth, "WaterTemp_C"),
-            melt_var(o2, times_pd, depth, "Water_DO_mg_per_L"),
-            melt_var(doc, times_pd, depth, "Water_DOC_mg_per_L"),
-            melt_var(poc, times_pd, depth, "Water_POC_mg_per_L"),
-            melt_var(r_layer, times_pd, depth, "Resp_g_per_day"),
-            melt_var(r_layer_m2, times_pd, depth, "Resp_g_per_m2_day"),
-            melt_var(gpp_layer, times_pd, depth, "GPP_g_per_day"),
-            melt_var(gpp_layer_m2, times_pd, depth, "GPP_g_per_m2_day"),  
-            melt_var(nep_layer, times_pd, depth, "NEP_g_per_day"),
-            melt_var(nep_layer_m2, times_pd, depth, "NEP_g_per_m2_day"),
-  ]
-    
-  fm_lake = dfs[0]
-  for df in dfs[1:]:
-            fm_lake = fm_lake.merge(df, on=["datetime", "depth"], how="left")
-            
-  fm_lake["depth"] = fm_lake["depth"] - 0.25
-        
-  fm_lake.to_csv(lake_output_dir / f"{key}.csv",index=False)
+  

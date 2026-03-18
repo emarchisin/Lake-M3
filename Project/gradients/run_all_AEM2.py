@@ -5,8 +5,27 @@ from pathlib import Path
 import h5py
 
 from processBased_lakeModel_functions import run_wq_model
-from model_setup import get_hypsography, get_lake_config, get_model_params, get_run_config, get_ice_and_snow, get_num_data_columns, provide_meteorology, initial_profile, wq_initial_profile, provide_phosphorus, provide_carbon
+from model_setup import get_num_data_columns, get_hypsography, get_lake_config, get_model_params, get_run_config, get_ice_and_snow, provide_meteorology, initial_profile, wq_initial_profile, provide_phosphorus, provide_carbon
 from hdf5_functions import save_dict_to_hdf5
+
+def melt_var(arr_2d, datetimes, depth, varname):
+
+            arr_2d = np.asarray(arr_2d)
+        
+            # force shape (depth , time)
+            if arr_2d.shape == (len(datetimes), len(depth)):
+                arr_2d = arr_2d.T
+        
+            assert arr_2d.shape == (len(depth), len(datetimes)), \
+                f"{varname} shape mismatch {arr_2d.shape}"
+        
+            df = pd.DataFrame({
+                "datetime": np.repeat(datetimes, len(depth)),
+                "depth": np.tile(depth, len(datetimes)),
+                varname: arr_2d.flatten(order="F")
+            })
+        
+            return df
 
 lake_dir = Path('Project/gradients')
 
@@ -14,27 +33,9 @@ config_dir = lake_dir / "config"
 driver_dir = lake_dir / "drivers"
 output_dir = lake_dir / "output"
 
-# Read just the header of the config file to map column names to column indices
-# This creates a list of column names: ['var', 'dish_10ha_1mgl...', ...]
-config_columns = pd.read_csv(config_dir / "lake_config.csv", nrows=0).columns.tolist()
-
-# --- Loop over a list of specific config column names ---
-target_lakes = [
-    "dish_10ha_1mgl_1yr_low_tp_coastal_plains",
-    "bowl_100ha_15mgl_5yr_high_tp_western_mountains"
-    # Add your target lake names here
-]
-
-for lake_name in target_lakes:
-    # Check if the requested lake actually exists in the config file
-    if lake_name not in config_columns:
-        print(f"Warning: '{lake_name}' not found in configuration files. Skipping.")
-        continue
-        
-    # Find the integer index of this column (e.g., 'var' is 0, first lake is 1, etc.)
-    lake_num = config_columns.index(lake_name)
-    
-    # Fetch configurations using the integer column index
+num_lakes = get_num_data_columns(config_dir/"lake_config.csv", "Zmax")
+num_lakes = 1
+for lake_num in range(1, num_lakes + 1):
     lake_config = get_lake_config(config_dir / "lake_config.csv", lake_num)
     model_params = get_model_params(config_dir / "model_params.csv", lake_num)
     run_config = get_run_config(config_dir / "run_config.csv", lake_num)
@@ -231,3 +232,72 @@ for lake_name in target_lakes:
     lake_output_dir.mkdir(exist_ok=True)
     with h5py.File(lake_output_dir / f"{run_config.name}.h5", "w") as h5f:
         save_dict_to_hdf5(h5f, "/", res)
+
+    # Model Output CSV
+    temp = res["temp"]
+    o2 = res["o2"] / volume[:, None]
+    docl = res["docl"]
+    docr = res["docr"]
+    pocl = res["pocl"]
+    pocr = res["pocr"]
+    npp = res["npp"]
+    atm_flux = res["atm_flux_output"]
+    docl_resp = res["docl_respiration"]
+    docr_resp = res["docr_respiration"]
+    poc_resp = res["poc_respiration"]
+    secchi = res["secchi"]
+    doc = (res["docl"] + res["docr"]) / volume[:, None]
+    poc = (res["pocl"] + res["pocr"]) / volume[:, None]
+        
+    r_layer = (
+            (docl * docl_resp) +
+            (docr * docr_resp) +
+            (pocl * poc_resp) +
+            (pocr * poc_resp))  # g/d per layer
+        
+    r_layer_m2 = r_layer / area[:, None] #g/m2/d
+        
+    gpp_layer = npp  # g/d per layer
+    gpp_layer_m2 = gpp_layer / area[:, None] #g/m2/d
+        
+    nep_layer = gpp_layer - r_layer #g/d per layer
+    nep_layer_m2 = nep_layer / area[:, None] #g/m2/d
+        
+    dfs = [
+            melt_var(temp, times, depth, "WaterTemp_C"),
+            melt_var(o2, times, depth, "Water_DO_mg_per_L"),
+            melt_var(doc, times, depth, "Water_DOC_mg_per_L"),
+            melt_var(poc, times, depth, "Water_POC_mg_per_L"),
+            melt_var(r_layer, times, depth, "Resp_g_per_day"),
+            melt_var(r_layer_m2, times, depth, "Resp_g_per_m2_day"),
+            melt_var(gpp_layer, times, depth, "GPP_g_per_day"),
+            melt_var(gpp_layer_m2, times, depth, "GPP_g_per_m2_day"),  
+            melt_var(nep_layer, times, depth, "NEP_g_per_day"),
+            melt_var(nep_layer_m2, times, depth, "NEP_g_per_m2_day"),
+  ]
+    
+    fm_lake = dfs[0]
+    for df in dfs[1:]:
+            fm_lake = fm_lake.merge(df, on=["datetime", "depth"], how="left")
+            
+    fm_lake["depth"] = fm_lake["depth"] - 0.25
+        
+    fm_lake.to_csv(lake_output_dir / f"{lake_key}_model.csv",index=False)
+
+    # Driver Output CSV
+    meteo = res["meteo_input"]
+    secchi = res["secchi"]
+    TP = res.get("TP", np.zeros_like(secchi))
+    
+    fm_driver = pd.DataFrame({
+            "datetime": times,
+            "Shortwave_Radiation_Downwelling_wattPerMeterSquared": meteo_all["Shortwave_Radiation_Downwelling_wattPerMeterSquared"].values, #input file
+            "Longwave_Flux_wattPerMeterSquared": meteo[1, :], #flux calculated in heating res 
+            "Air_Temperature_celsius": meteo_all["Air_Temperature_celsius"].values, #input file
+            "Ten_Meter_Elevation_Wind_Speed_meterPerSecond": meteo_all["Ten_Meter_Elevation_Wind_Speed_meterPerSecond"].values, #added windfactor
+            "Precipitation_millimeterPerDay": meteo_all["Precipitation_millimeterPerDay"].values,#input file
+            "Water_Secchi_m": secchi.flatten(),
+            "TP_load_ug_per_L": TP.flatten(),})
+    
+
+    fm_driver.to_csv(lake_output_dir / f"{lake_key}_driver.csv",index=False)
