@@ -20,12 +20,17 @@ template_lake = pd.read_csv('Project/gradients/base_config/lake_config.csv')
 template_lake.set_index('var', inplace=True)
 base_lake_config = template_lake['Lake1'].to_dict()
 
+# Ice & Snow Config Template
+template_ice = pd.read_csv('Project/gradients/base_config/ice_and_snow.csv')
+template_ice.set_index('var', inplace=True)
+base_ice_config = template_ice['Lake1'].to_dict()
+
 # Load the Max Depths Lookup Table ---
 max_depths = pd.read_csv("Project/gradients/drivers/lake_volumes.csv")
 
 # --- Set Run Timing ---
 custom_start_time = "1/1/16 0:00"
-custom_end_time = "1/1/19 0:00"
+custom_end_time = "1/1/17 0:00"
 
 shapes = ['dish', 'bowl', 'bucket']
 areas = [10, 100, 1000]
@@ -83,6 +88,7 @@ combinations = list(itertools.product(shapes, areas, rts, tp_oc_pairs, meteos))
 new_run_config = {}
 new_param_config = {}
 new_lake_config = {}
+new_ice_config = {}
 
 for combo in combinations:
     shape, area, rt, tp_oc_pair, meteo = combo
@@ -128,6 +134,8 @@ for combo in combinations:
     
     new_lake_config[lake_name] = l_config
 
+    new_ice_config[lake_name] = base_ice_config.copy()
+
 
 # --- Export DataFrames to CSV ---
 # Run Config
@@ -148,3 +156,9 @@ final_lake_df = pd.DataFrame(new_lake_config)
 final_lake_df.index.name = 'var'
 final_lake_df.reset_index(inplace=True)
 final_lake_df.to_csv("Project/gradients/config/lake_config.csv", index=False)
+
+# Ice and Snow Config
+final_ice_df = pd.DataFrame(new_ice_config)
+final_ice_df.index.name = 'var'
+final_ice_df.reset_index(inplace=True)
+final_ice_df.to_csv("Project/gradients/config/ice_and_snow.csv", index=False)
