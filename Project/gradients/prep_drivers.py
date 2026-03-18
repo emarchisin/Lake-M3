@@ -125,7 +125,7 @@ oc_loads = [1, 15, 30]
 residence_times_yr = [1, 5, 10]
 
 # Generate daily dates from Jan 1, 2016 to Jan 1, 2026
-date_series = pd.date_range(start="2016-01-01", end="2026-01-01", freq="D")
+date_series = pd.date_range(start="2016-02-01", end="2025-01-01", freq="D")
 
 for index, row in df_volumes.iterrows():
     shape = row['shape']
