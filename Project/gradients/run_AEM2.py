@@ -278,13 +278,22 @@ def process_lake(lake_name):
 # --- 2. Main execution block for parallel processing ---
 if __name__ == '__main__':
     target_lakes = [
-        "dish_100ha_1mgl_1yr_low_tp_coastal_plains",
-        "bowl_100ha_15mgl_5yr_high_tp_western_mountains"
-        # Add all your target lake names here
-    ]
+    "dish_10ha_15mgl_10yr_high_tp_xeric",
+    "dish_10ha_1mgl_1yr_low_tp_coastal_plains",
+    "dish_1000ha_1mgl_1yr_low_tp_southern_plains",
+    "dish_1000ha_15mgl_10yr_high_tp_coastal_plains",
+    "bucket_1000ha_15mgl_10yr_high_tp_xeric",
+    "bucket_10ha_30mgl_10yr_med_tp_southern_plains",
+    "bucket_10ha_15mgl_5yr_high_tp_coastal_plains",
+    "dish_10ha_30mgl_10yr_med_tp_northern_plains",
+    "bucket_1000ha_1mgl_1yr_low_tp_western_mountains",
+    "dish_1000ha_30mgl_10yr_med_tp_western_mountains",
+    "bowl_100ha_15mgl_5yr_high_tp_xeric",
+    "bucket_1000ha_30mgl_10yr_med_tp_northern_appalachians"
+]
     
     # Get count of CPUs to determine how many workers to use
-    max_workers = max(1, multiprocessing.cpu_count() - 1)
+    max_workers = multiprocessing.cpu_count()
     print(f"Starting parallel run with up to {max_workers} workers...")
     
     # Launch parallel executor

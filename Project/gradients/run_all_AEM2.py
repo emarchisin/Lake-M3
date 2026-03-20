@@ -277,8 +277,8 @@ if __name__ == '__main__':
     # Determine the total number of lakes directly from the configs
     num_lakes = get_num_data_columns(config_dir / "lake_config.csv", "Zmax")
     
-    # Use CPU count to determine number of workers (leave 1 core free for OS)
-    max_workers = max(1, multiprocessing.cpu_count() - 1)
+    # Use CPU count to determine number of workers
+    max_workers = multiprocessing.cpu_count()
     
     print(f"Detected {num_lakes} lakes in config.")
     print(f"Starting parallel run across {max_workers} worker processes...")
