@@ -3,29 +3,30 @@ import pandas as pd
 from copy import deepcopy
 from pathlib import Path
 import h5py
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from processBased_lakeModel_functions import run_wq_model
 from model_setup import get_num_data_columns, get_hypsography, get_lake_config, get_model_params, get_run_config, get_ice_and_snow, provide_meteorology, initial_profile, wq_initial_profile, provide_phosphorus, provide_carbon
 from hdf5_functions import save_dict_to_hdf5
 
 def melt_var(arr_2d, datetimes, depth, varname):
+    arr_2d = np.asarray(arr_2d)
 
-            arr_2d = np.asarray(arr_2d)
-        
-            # force shape (depth , time)
-            if arr_2d.shape == (len(datetimes), len(depth)):
-                arr_2d = arr_2d.T
-        
-            assert arr_2d.shape == (len(depth), len(datetimes)), \
-                f"{varname} shape mismatch {arr_2d.shape}"
-        
-            df = pd.DataFrame({
-                "datetime": np.repeat(datetimes, len(depth)),
-                "depth": np.tile(depth, len(datetimes)),
-                varname: arr_2d.flatten(order="F")
-            })
-        
-            return df
+    # force shape (depth , time)
+    if arr_2d.shape == (len(datetimes), len(depth)):
+        arr_2d = arr_2d.T
+
+    assert arr_2d.shape == (len(depth), len(datetimes)), \
+        f"{varname} shape mismatch {arr_2d.shape}"
+
+    df = pd.DataFrame({
+        "datetime": np.repeat(datetimes, len(depth)),
+        "depth": np.tile(depth, len(datetimes)),
+        varname: arr_2d.flatten(order="F")
+    })
+
+    return df
 
 lake_dir = Path('Project/gradients')
 
@@ -33,47 +34,44 @@ config_dir = lake_dir / "config"
 driver_dir = lake_dir / "drivers"
 output_dir = lake_dir / "output"
 
-num_lakes = get_num_data_columns(config_dir/"lake_config.csv", "Zmax")
-num_lakes = 1
-for lake_num in range(1, num_lakes + 1):
+# --- 1. Define the worker function ---
+def process_lake(lake_num):
     lake_config = get_lake_config(config_dir / "lake_config.csv", lake_num)
     model_params = get_model_params(config_dir / "model_params.csv", lake_num)
     run_config = get_run_config(config_dir / "run_config.csv", lake_num)
     ice_and_snow = get_ice_and_snow(config_dir / "ice_and_snow.csv", lake_num)
     
-    print(f"=======Running {run_config.name}=======")
+    lake_key = f"{run_config.name}"
+    print(f"======= Starting {lake_key} =======")
     
     windfactor = float(model_params["wind_factor"])
-    nx = int(run_config["nx"])  # number of layers we will have
-    dt = float(run_config["dt"])  # 24 hours times 60 min/hour times 60 seconds/min to convert s to day
-    dx = float(run_config["dx"])  # spatial step
+    nx = int(run_config["nx"])
+    # dt = float(run_config["dt"])
+    dx = float(run_config["dx"])
 
-    ## area and depth values of our lake 
     area, depth, volume, hypso_weight = get_hypsography(
         hypsofile=driver_dir / run_config['hypso_ini_file'],
         dx=dx, nx=nx, outflow_depth=float(lake_config["outflow_depth"])
     )
   
-    ## time step discretization 
-    #get start time from input file
     desired_start = pd.Timestamp(run_config["start_time"])  
     desired_end = pd.Timestamp(run_config["end_time"])  
     
-    startTime = 1 # RL: SOMEONE SHOULD THINK ABOUT THIS MORE DEEPLY!
+    startTime = 1 
     startingDate = desired_start
     
-    n_days = (desired_end - desired_start).days + (desired_end - desired_start).seconds / 86400 
+    # n_days = (desired_end - desired_start).days + (desired_end - desired_start).seconds / 86400 
     
-    hydrodynamic_timestep = 24 * dt
-    total_runtime = (n_days) * hydrodynamic_timestep / dt  
+    # hydrodynamic_timestep = 24 * dt
+    # total_runtime = (n_days) * hydrodynamic_timestep / dt  
     
-    endTime = (startTime + total_runtime) 
+    # endTime = (startTime + total_runtime) 
   
     endingDate = desired_end
 
     times = pd.date_range(startingDate, endingDate, freq='H')
 
-    nTotalSteps = int(total_runtime)
+    # nTotalSteps = int(total_runtime)
 
     meteo_all = provide_meteorology(
         meteofile=driver_dir / run_config["meteo_ini_file"], 
@@ -81,32 +79,26 @@ for lake_num in range(1, num_lakes + 1):
         startDate=startingDate, endDate=endingDate
     )
                      
-    atm_flux_output = np.zeros(nTotalSteps,) 
+    # atm_flux_output = np.zeros(nTotalSteps,) 
     u_ini = initial_profile(
         initfile=driver_dir / run_config["u_ini_file"], nx=nx, dx=dx,
-        depth=depth,
-        startDate=startingDate
+        depth=depth, startDate=startingDate
     ) 
     wq_ini = wq_initial_profile(
         initfile=driver_dir / run_config["wq_ini_file"], nx=nx, dx=dx,
-        depth=depth, 
-        volume=volume,
-        startDate=startingDate
+        depth=depth, volume=volume, startDate=startingDate
     )
     tp_boundary = provide_phosphorus(
         tpfile=driver_dir / run_config["tp_ini_file"], 
-        startingDate=startingDate,
-        startTime=startTime
+        startingDate=startingDate, startTime=startTime
     )
     carbon = provide_carbon(
         ocloadfile=driver_dir / run_config["oc_load_file"], 
-        startingDate=startingDate,
-        startTime=startTime
+        startingDate=startingDate, startTime=startTime
     ).dropna(subset=['oc'])
 
     res = run_wq_model(
-        # RUNTIME CONFIG
-        lake_num=lake_num,  # Passed the integer ID back here for any internal logic
+        lake_num=lake_num,
         startTime=startingDate,
         endTime=endingDate,
         nx=run_config["nx"],
@@ -117,8 +109,6 @@ for lake_num in range(1, num_lakes + 1):
         training_data_path=run_config["training_data_path"],
         diffusion_method=run_config["diffusion_method"],
         scheme=run_config["scheme"],
-
-        # LAKE CONFIG
         area=area,  
         volume=volume,  
         depth=depth,  
@@ -129,22 +119,16 @@ for lake_num in range(1, num_lakes + 1):
         altitude=lake_config['Elevation'],
         lat=lake_config['Latitude'],
         long=lake_config['Longitude'],
-
-        # MODEL PARAMS - initial conditions
         u=deepcopy(u_ini),  
         o2=deepcopy(wq_ini[0]),  
         docr=deepcopy(wq_ini[1]) * .75, 
         docl=deepcopy(wq_ini[1]) * .25,
         pocr=0.5 * volume, 
         pocl=0.5 * volume, 
-
-        # meteorology & boundary forcing
         daily_meteo=meteo_all,
         secview=None,
         phosphorus_data=tp_boundary,
         oc_load_input=carbon,
-
-        # ice & snow dynamics
         ice=ice_and_snow["ice"],
         Hi=ice_and_snow["Hi"],
         Hs=ice_and_snow["Hs"],
@@ -155,21 +139,14 @@ for lake_num in range(1, num_lakes + 1):
         Ice_min=ice_and_snow["Ice_min"],
         KEice=ice_and_snow["KEice"],
         rho_snow=ice_and_snow["rho_snow"],
-
-        # mixing and physical transport
         km=model_params["km"],
         k0=model_params["k0"],
         weight_kz=model_params["weight_kz"],
         piston_velocity=model_params["piston_velocity"] / 86400, 
         Cd=model_params["Cd"],
         hydro_res_time_hr=model_params["hydro_res_time"] * 8760, 
-        W_str=(
-            None if pd.isna(model_params["W_str"])
-            else model_params["W_str"]
-        ),
+        W_str=(None if pd.isna(model_params["W_str"]) else model_params["W_str"]),
         denThresh=model_params["denThresh"],
-
-        # light & heat fluxes
         kd_light=model_params["kd_light"],
         light_water=model_params["light_water"],
         light_doc=model_params["light_doc"],
@@ -183,8 +160,6 @@ for lake_num in range(1, num_lakes + 1):
         at_factor=model_params["at_factor"],
         turb_factor=model_params["turb_factor"],
         Hgeo=model_params["Hgeo"],
-
-        # biogeochemical params 
         resp_docr=model_params["resp_docr"] / 86400,
         resp_docl=model_params["resp_docl"] / 86400,
         resp_pocr=model_params["resp_pocr"] / 86400,
@@ -203,14 +178,10 @@ for lake_num in range(1, num_lakes + 1):
         k_TP=model_params['k_TP'],
         f_sod=model_params["f_sod"],
         d_thick=model_params["d_thick"],
-       
-        # carbon pool partitioning
         prop_oc_docr=model_params["prop_oc_docr"],
         prop_oc_docl=model_params["prop_oc_docl"],
         prop_oc_pocr=model_params["prop_oc_pocr"],
         prop_oc_pocl=model_params["prop_oc_pocl"],
-
-        # general physical constants
         p2=model_params["p2"],
         B=model_params["B"],
         g=model_params["g"],
@@ -225,12 +196,9 @@ for lake_num in range(1, num_lakes + 1):
     res['area'] = area
     res['depth'] = depth
 
-    # write out output
-    # Name the output folder/file using the string descriptive name rather than 'Lake1'
-    lake_key = f"{run_config.name}"
     lake_output_dir = output_dir / lake_key
     lake_output_dir.mkdir(exist_ok=True)
-    with h5py.File(lake_output_dir / f"{run_config.name}.h5", "w") as h5f:
+    with h5py.File(lake_output_dir / f"{lake_key}.h5", "w") as h5f:
         save_dict_to_hdf5(h5f, "/", res)
 
     # Model Output CSV
@@ -241,7 +209,7 @@ for lake_num in range(1, num_lakes + 1):
     pocl = res["pocl"]
     pocr = res["pocr"]
     npp = res["npp"]
-    atm_flux = res["atm_flux_output"]
+    # atm_flux = res["atm_flux_output"]
     docl_resp = res["docl_respiration"]
     docr_resp = res["docr_respiration"]
     poc_resp = res["poc_respiration"]
@@ -301,3 +269,31 @@ for lake_num in range(1, num_lakes + 1):
     
 
     fm_driver.to_csv(lake_output_dir / f"{lake_key}_driver.csv",index=False)
+
+    return f"======= Completed {lake_key} ======="
+
+# --- 2. Main Execution Block ---
+if __name__ == '__main__':
+    # Determine the total number of lakes directly from the configs
+    num_lakes = get_num_data_columns(config_dir / "lake_config.csv", "Zmax")
+    
+    # Use CPU count to determine number of workers (leave 1 core free for OS)
+    max_workers = max(1, multiprocessing.cpu_count() - 1)
+    
+    print(f"Detected {num_lakes} lakes in config.")
+    print(f"Starting parallel run across {max_workers} worker processes...")
+    
+    # Run the pool using indices 1 to num_lakes inclusive
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all lakes to the pool
+        futures = {executor.submit(process_lake, i): i for i in range(1, num_lakes + 1)}
+        
+        for future in as_completed(futures):
+            lake_idx = futures[future]
+            try:
+                result = future.result()
+                print(result)
+            except Exception as exc:
+                print(f"❌ Lake index {lake_idx} generated an exception: {exc}")
+                
+    print("\nAll simulations completed.")
