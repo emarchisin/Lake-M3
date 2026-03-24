@@ -8,9 +8,9 @@ template_run.set_index('var', inplace=True)
 base_run_config = template_run['Lake1'].to_dict()
 
 # Model Params Template
-template_param = pd.read_csv('Project/gradients/base_config/model_params.csv')
+template_param = pd.read_csv('Project/gradients/base_config/model_params_pch.csv')
 template_param.set_index('var', inplace=True)
-base_param_config = template_param['Lake1'].to_dict()
+base_param_config = template_param['NEWVALUES'].to_dict()
 # Save the description and units to re-attach later
 param_metadata = template_param[['Description', 'Units']].copy()
 
@@ -72,12 +72,12 @@ ecoregion_geo_map = {
     'northern_appalachians': (44.0, -71.0, 400)
 }
 
-# (tp_file, oc_mgL) pairings
+# (tp_file, oc_mgL, f_sod) pairings
 tp_oc_pairs = [
-    ('tp/low_tp.csv', 1),
-    ('tp/med_tp.csv', 1),
-    ('tp/high_tp.csv', 15),
-    ('tp/med_tp.csv', 30)
+    ('tp/low_tp.csv', 1, 2e-6),
+    ('tp/med_tp.csv', 1, 7e-6),
+    ('tp/high_tp.csv', 15, 2e-5),
+    ('tp/med_tp.csv', 30, 2e-5)
 ]
 
 # Generate the 864 combinations
@@ -91,7 +91,7 @@ new_ice_config = {}
 
 for combo in combinations:
     shape, area, rt, tp_oc_pair, meteo = combo
-    tp, oc = tp_oc_pair
+    tp, oc, f_sod = tp_oc_pair
     
     tp_name = tp.split('/')[-1].replace('.csv', '')
     meteo_name = meteo.split('/')[-1].replace('_2016-2024.csv', '')
@@ -116,6 +116,7 @@ for combo in combinations:
     # Update Model Params 
     p_config = base_param_config.copy()
     p_config['hydro_res_time'] = rt
+    p_config['f_sod'] = f_sod
     new_param_config[lake_name] = p_config
     
     # Update Lake Config 

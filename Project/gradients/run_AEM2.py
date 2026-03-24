@@ -184,7 +184,7 @@ def process_lake(lake_name):
         g=model_params["g"],
         meltP=model_params["meltP"],
     )
-
+    
     res['starttime'] = startingDate
     res['times'] = times
     res['dx'] = dx
@@ -201,7 +201,6 @@ def process_lake(lake_name):
     # Save to HDF5
     with h5py.File(lake_output_dir / f"{run_config.name}.h5", "w") as h5f:
         save_dict_to_hdf5(h5f, "/", res)
-
     # Model Output CSV
     temp = res["temp"]
     o2 = res["o2"] / volume[:, None]
@@ -250,9 +249,7 @@ def process_lake(lake_name):
             fm_lake = fm_lake.merge(df, on=["datetime", "depth"], how="left")
             
     fm_lake["depth"] = fm_lake["depth"] - 0.25
-        
-    fm_lake.to_csv(lake_output_dir / f"{lake_key}_model.csv",index=False)
-
+    fm_lake.to_parquet(lake_output_dir / f"{lake_key}_model.parquet", index=False, compression='zstd')
     # Driver Output CSV
     meteo = res["meteo_input"]
     secchi = res["secchi"]
@@ -269,7 +266,7 @@ def process_lake(lake_name):
             "TP_load_ug_per_L": TP.flatten(),})
     
 
-    fm_driver.to_csv(lake_output_dir / f"{lake_key}_driver.csv",index=False)
+    fm_driver.to_parquet(lake_output_dir / f"{lake_key}_driver.parquet", index=False, compression='zstd')
 
     return f"======= Completed {run_config.name} ======="
 
@@ -289,7 +286,8 @@ if __name__ == '__main__':
     "bucket_1000ha_1mgl_1yr_low_tp_western_mountains",
     "dish_1000ha_30mgl_10yr_med_tp_western_mountains",
     "bowl_100ha_15mgl_5yr_high_tp_xeric",
-    "bucket_1000ha_30mgl_10yr_med_tp_northern_appalachians"
+    "bucket_1000ha_30mgl_10yr_med_tp_northern_appalachians",
+    # "bowl_1000ha_1mgl_10yr_low_tp_northern_plains"
 ]
     
     # Get count of CPUs to determine how many workers to use
