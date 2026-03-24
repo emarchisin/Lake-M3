@@ -44,7 +44,7 @@ def process_lake(lake_num):
     lake_key = f"{run_config.name}"
     print(f"======= Starting {lake_key} =======")
     
-    windfactor = float(model_params["wind_factor"])
+    windfactor = float(lake_config["wind_factor"])
     nx = int(run_config["nx"])
     # dt = float(run_config["dt"])
     dx = float(run_config["dx"])
@@ -144,7 +144,7 @@ def process_lake(lake_num):
         weight_kz=model_params["weight_kz"],
         piston_velocity=model_params["piston_velocity"] / 86400, 
         Cd=model_params["Cd"],
-        hydro_res_time_hr=model_params["hydro_res_time"] * 8760, 
+        hydro_res_time_hr=lake_config["hydro_res_time"] * 8760, 
         W_str=(None if pd.isna(model_params["W_str"]) else model_params["W_str"]),
         denThresh=model_params["denThresh"],
         kd_light=model_params["kd_light"],
@@ -155,10 +155,10 @@ def process_lake(lake_num):
         eps=model_params["eps"],
         emissivity=model_params["emissivity"],
         sigma=model_params["sigma"],
-        sw_factor=model_params["sw_factor"],
-        wind_factor=model_params["wind_factor"],
-        at_factor=model_params["at_factor"],
-        turb_factor=model_params["turb_factor"],
+        sw_factor=lake_config["sw_factor"],
+        wind_factor=lake_config["wind_factor"],
+        at_factor=lake_config["at_factor"],
+        turb_factor=lake_config["turb_factor"],
         Hgeo=model_params["Hgeo"],
         resp_docr=model_params["resp_docr"] / 86400,
         resp_docl=model_params["resp_docl"] / 86400,
@@ -176,12 +176,12 @@ def process_lake(lake_num):
         p_max=model_params["p_max"] / 86400,
         prop_I_npp=model_params['prop_I_npp'],
         k_TP=model_params['k_TP'],
-        f_sod=model_params["f_sod"],
+        f_sod=lake_config["f_sod"],
         d_thick=model_params["d_thick"],
-        prop_oc_docr=model_params["prop_oc_docr"],
-        prop_oc_docl=model_params["prop_oc_docl"],
-        prop_oc_pocr=model_params["prop_oc_pocr"],
-        prop_oc_pocl=model_params["prop_oc_pocl"],
+        prop_oc_docr=lake_config["prop_oc_docr"],
+        prop_oc_docl=lake_config["prop_oc_docl"],
+        prop_oc_pocr=lake_config["prop_oc_pocr"],
+        prop_oc_pocl=lake_config["prop_oc_pocl"],
         p2=model_params["p2"],
         B=model_params["B"],
         g=model_params["g"],
@@ -275,7 +275,7 @@ def process_lake(lake_num):
 # --- 2. Main Execution Block ---
 if __name__ == '__main__':
     # Determine the total number of lakes directly from the configs
-    num_lakes = get_num_data_columns(config_dir / "lake_config.csv", "Zmax")
+    num_lakes = get_num_data_columns(config_dir / "run_config.csv", "nx")
     
     # Use CPU count to determine number of workers
     max_workers = multiprocessing.cpu_count()

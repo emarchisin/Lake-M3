@@ -8,9 +8,9 @@ template_run.set_index('var', inplace=True)
 base_run_config = template_run['Lake1'].to_dict()
 
 # Model Params Template
-template_param = pd.read_csv('Project/gradients/base_config/model_params_pch.csv')
+template_param = pd.read_csv('Project/gradients/base_config/model_params.csv')
 template_param.set_index('var', inplace=True)
-base_param_config = template_param['NEWVALUES'].to_dict()
+base_param_config = template_param['Lake1'].to_dict()
 # Save the description and units to re-attach later
 param_metadata = template_param[['Description', 'Units']].copy()
 
@@ -18,6 +18,7 @@ param_metadata = template_param[['Description', 'Units']].copy()
 template_lake = pd.read_csv('Project/gradients/base_config/lake_config.csv')
 template_lake.set_index('var', inplace=True)
 base_lake_config = template_lake['Lake1'].to_dict()
+lake_param_metadata = template_lake[['Description', 'Units']].copy()
 
 # Ice & Snow Config Template
 template_ice = pd.read_csv('Project/gradients/base_config/ice_and_snow.csv')
@@ -115,8 +116,6 @@ for combo in combinations:
     
     # Update Model Params 
     p_config = base_param_config.copy()
-    p_config['hydro_res_time'] = rt
-    p_config['f_sod'] = f_sod
     new_param_config[lake_name] = p_config
     
     # Update Lake Config 
@@ -127,6 +126,8 @@ for combo in combinations:
     l_config['Latitude'] = lat
     l_config['Longitude'] = lon
     l_config['Elevation'] = elev
+    l_config['hydro_res_time'] = rt
+    l_config['f_sod'] = f_sod
 
     # Scaled Morphometry
     l_config['Zmax'] = round(z_max, 2)
@@ -153,6 +154,7 @@ final_param_df.to_csv("Project/gradients/config/model_params.csv", index=False)
 
 # Lake Config
 final_lake_df = pd.DataFrame(new_lake_config)
+final_lake_df = pd.concat([lake_param_metadata, final_lake_df], axis=1)
 final_lake_df.index.name = 'var'
 final_lake_df.reset_index(inplace=True)
 final_lake_df.to_csv("Project/gradients/config/lake_config.csv", index=False)
