@@ -1,7 +1,17 @@
-var,Lake1
-Zmax,25
-Albedo,0.1
-outflow_depth,6.5
-Latitude,43.1
-Longitude,-89.41
-Elevation,258
+var,Description,Units,Lake1,Lake2
+Zmax,Lake Max Depth,m,25,25
+Albedo,,,0.1,0.1
+outflow_depth,,m,6.5,6.5
+Latitude,,degrees,43.1,43.1
+Longitude,,degrees,-89.41,-89.41
+Elevation,,m,258,258
+hydro_res_time,Hydrologic residence time,years,4.3,4.3
+sw_factor,Multiplier for shortwave radiation,,1,1
+wind_factor,Multiplier for wind speed,,0.9,0.9
+at_factor,Multiplier for air temperature,,1,1
+turb_factor,Multiplier for turbulent heat fluxes,,1,1
+prop_oc_docr,Proportion of OC load that is recalcitrant DOC,,0.9,0.9
+prop_oc_docl,Proportion of OC load that is labile DOC,,0.05,0.05
+prop_oc_pocr,Proportion of OC load that is recalcitrant POC,,0.05,0.05
+prop_oc_pocl,Proportion of OC load that is labile POC,,0.1,0.1
+f_sod,Steady sediment consumption of DO,g/m3/s,2E-06,2E-06

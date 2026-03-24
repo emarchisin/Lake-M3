@@ -21,7 +21,7 @@ from pathlib import Path
 # os.chdir('/Users/paul/Dropbox/Hanson/MyModels/1D-AEMpy-UW-metabolism-EM/src')
 # os.chdir('/Users/au740615/Documents/projects/1D-AEMpy-UW-metabolism-EM/src')
 
-lake_dir=Path('../Project/Example-EM')
+lake_dir=Path('./Project/Example-EM')
 
 config_dir=lake_dir/"Config"
 driver_dir=lake_dir/"Drivers"
@@ -36,7 +36,7 @@ from model_setup import get_hypsography,get_secview, get_lake_config, get_model_
 from postprocess import post_process
 
 Start = datetime.datetime.now()
-num_lakes = get_num_data_columns(config_dir/"lake_config.csv", "Zmax")
+num_lakes = get_num_data_columns(config_dir / "run_config.csv", "nx")
 
 for lake_num in range(1, num_lakes + 1):
     print(f"=======Running Lake {lake_num}=======")
@@ -51,7 +51,7 @@ for lake_num in range(1, num_lakes + 1):
     lake_output_dir=output_dir/lake_key
     lake_output_dir.mkdir(exist_ok=True)
     
-    windfactor = float(model_params["wind_factor"])
+    windfactor = float(lake_config["wind_factor"])
     #zmax = lake_config['Zmax']
     nx = int(run_config["nx"])# number of layers we will have
     dt = float(run_config["dt"])# 24 hours times 60 min/hour times 60 seconds/min to convert s to day
@@ -164,7 +164,7 @@ for lake_num in range(1, num_lakes + 1):
         weight_kz=model_params["weight_kz"],
         piston_velocity=model_params["piston_velocity"]/86400,
         Cd=model_params["Cd"],
-        hydro_res_time_hr=model_params["hydro_res_time"]*8760,
+        hydro_res_time_hr=lake_config["hydro_res_time"]*8760,
         W_str=(
             None if pd.isna(model_params["W_str"])
             else model_params["W_str"]
@@ -180,10 +180,10 @@ for lake_num in range(1, num_lakes + 1):
         eps=model_params["eps"],
         emissivity=model_params["emissivity"],
         sigma=model_params["sigma"],
-        sw_factor=model_params["sw_factor"],
-        wind_factor=model_params["wind_factor"],
-        at_factor=model_params["at_factor"],
-        turb_factor=model_params["turb_factor"],
+        sw_factor=lake_config["sw_factor"],
+        wind_factor=lake_config["wind_factor"],
+        at_factor=lake_config["at_factor"],
+        turb_factor=lake_config["turb_factor"],
         Hgeo=model_params["Hgeo"],
 
         # biogeochemical params 
@@ -206,16 +206,16 @@ for lake_num in range(1, num_lakes + 1):
         p_max=model_params["p_max"]/86400,
         prop_I_npp=model_params['prop_I_npp'],
         k_TP=model_params['k_TP'],
-        f_sod=model_params["f_sod"],
+        f_sod=lake_config["f_sod"],
         d_thick=model_params["d_thick"],
         
        
 
         # carbon pool partitioning
-        prop_oc_docr=model_params["prop_oc_docr"],
-        prop_oc_docl=model_params["prop_oc_docl"],
-        prop_oc_pocr=model_params["prop_oc_pocr"],
-        prop_oc_pocl=model_params["prop_oc_pocl"],
+        prop_oc_docr=lake_config["prop_oc_docr"],
+        prop_oc_docl=lake_config["prop_oc_docl"],
+        prop_oc_pocr=lake_config["prop_oc_pocr"],
+        prop_oc_pocl=lake_config["prop_oc_pocl"],
 
         # general physical constants
         p2=model_params["p2"],
