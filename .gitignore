@@ -3,4 +3,4 @@
 build/
 *.egg-info
 Project/gradients/notes.txt
-Project/gradients/output
+Project/gradients/output*
