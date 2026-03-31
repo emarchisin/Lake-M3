@@ -4,6 +4,9 @@ from copy import deepcopy
 from pathlib import Path
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import os
+import contextlib
+from tqdm import tqdm
 
 from processBased_lakeModel_functions import run_wq_model
 from model_setup import get_num_data_columns, get_hypsography, get_lake_config, get_model_params, get_run_config, get_ice_and_snow, provide_meteorology, initial_profile, wq_initial_profile, provide_phosphorus, provide_carbon
@@ -33,69 +36,64 @@ driver_dir = lake_dir / "drivers"
 output_dir = lake_dir / "output"
 
 # --- 1. Define the worker function ---
-def process_lake(lake_num):
+def process_lake(lake_num, active_dict):
     lake_config = get_lake_config(config_dir / "lake_config.csv", lake_num)
-    model_params = get_model_params(config_dir / "model_params.csv", lake_num)
     run_config = get_run_config(config_dir / "run_config.csv", lake_num)
-    ice_and_snow = get_ice_and_snow(config_dir / "ice_and_snow.csv", lake_num)
     
     lake_key = f"{run_config.name}"
-    print(f"======= Starting {lake_key} =======")
     
-    windfactor = float(lake_config["wind_factor"])
-    nx = int(run_config["nx"])
-    # dt = float(run_config["dt"])
-    dx = float(run_config["dx"])
-
-    area, depth, volume, hypso_weight = get_hypsography(
-        hypsofile=driver_dir / run_config['hypso_ini_file'],
-        dx=dx, nx=nx, outflow_depth=float(lake_config["outflow_depth"])
-    )
-  
-    desired_start = pd.Timestamp(run_config["start_time"])  
-    desired_end = pd.Timestamp(run_config["end_time"])  
+    # Register this lake as currently running
+    active_dict[lake_num] = lake_key
     
-    startTime = 1 
-    startingDate = desired_start
-    
-    # n_days = (desired_end - desired_start).days + (desired_end - desired_start).seconds / 86400 
-    
-    # hydrodynamic_timestep = 24 * dt
-    # total_runtime = (n_days) * hydrodynamic_timestep / dt  
-    
-    # endTime = (startTime + total_runtime) 
-  
-    endingDate = desired_end
+    try:
+        model_params = get_model_params(config_dir / "model_params.csv", lake_num)
+        ice_and_snow = get_ice_and_snow(config_dir / "ice_and_snow.csv", lake_num)
+        
+        windfactor = float(lake_config["wind_factor"])
+        nx = int(run_config["nx"])
+        dx = float(run_config["dx"])
 
-    times = pd.date_range(startingDate, endingDate, freq='H')
+        area, depth, volume, hypso_weight = get_hypsography(
+            hypsofile=driver_dir / run_config['hypso_ini_file'],
+            dx=dx, nx=nx, outflow_depth=float(lake_config["outflow_depth"])
+        )
+      
+        desired_start = pd.Timestamp(run_config["start_time"])  
+        desired_end = pd.Timestamp(run_config["end_time"])  
+        
+        startTime = 1 
+        startingDate = desired_start
+      
+        endingDate = desired_end
+        times = pd.date_range(startingDate, endingDate, freq='H')
 
-    # nTotalSteps = int(total_runtime)
+        meteo_all = provide_meteorology(
+            meteofile=driver_dir / run_config["meteo_ini_file"], 
+            windfactor=windfactor, lat=lake_config["Latitude"], lon=lake_config["Longitude"], elev=lake_config["Elevation"],
+            startDate=startingDate, endDate=endingDate
+        )
+                         
+        u_ini = initial_profile(
+            initfile=driver_dir / run_config["u_ini_file"], nx=nx, dx=dx,
+            depth=depth, startDate=startingDate
+        ) 
+        wq_ini = wq_initial_profile(
+            initfile=driver_dir / run_config["wq_ini_file"], nx=nx, dx=dx,
+            depth=depth, volume=volume, startDate=startingDate
+        )
+        tp_boundary = provide_phosphorus(
+            tpfile=driver_dir / run_config["tp_ini_file"], 
+            startingDate=startingDate, startTime=startTime
+        )
+        carbon = provide_carbon(
+            ocloadfile=driver_dir / run_config["oc_load_file"], 
+            startingDate=startingDate, startTime=startTime
+        ).dropna(subset=['oc'])
 
-    meteo_all = provide_meteorology(
-        meteofile=driver_dir / run_config["meteo_ini_file"], 
-        windfactor=windfactor, lat=lake_config["Latitude"], lon=lake_config["Longitude"], elev=lake_config["Elevation"],
-        startDate=startingDate, endDate=endingDate
-    )
-                     
-    # atm_flux_output = np.zeros(nTotalSteps,) 
-    u_ini = initial_profile(
-        initfile=driver_dir / run_config["u_ini_file"], nx=nx, dx=dx,
-        depth=depth, startDate=startingDate
-    ) 
-    wq_ini = wq_initial_profile(
-        initfile=driver_dir / run_config["wq_ini_file"], nx=nx, dx=dx,
-        depth=depth, volume=volume, startDate=startingDate
-    )
-    tp_boundary = provide_phosphorus(
-        tpfile=driver_dir / run_config["tp_ini_file"], 
-        startingDate=startingDate, startTime=startTime
-    )
-    carbon = provide_carbon(
-        ocloadfile=driver_dir / run_config["oc_load_file"], 
-        startingDate=startingDate, startTime=startTime
-    ).dropna(subset=['oc'])
-
-    res = run_wq_model(
+        # Suppress the internal tqdm and print statements from the model
+        with open(os.devnull, 'w') as fnull:
+            with contextlib.redirect_stdout(fnull), contextlib.redirect_stderr(fnull):
+                res = run_wq_model(
         lake_num=lake_num,
         startTime=startingDate,
         endTime=endingDate,
@@ -186,48 +184,46 @@ def process_lake(lake_num):
         meltP=model_params["meltP"],
     )
 
-    res['starttime'] = startingDate
-    res['times'] = times
-    res['dx'] = dx
-    res['nx'] = nx
-    res['volume'] = volume
-    res['area'] = area
-    res['depth'] = depth
+        res['starttime'] = startingDate
+        res['times'] = times
+        res['dx'] = dx
+        res['nx'] = nx
+        res['volume'] = volume
+        res['area'] = area
+        res['depth'] = depth
 
-    lake_output_dir = output_dir / lake_key
-    lake_output_dir.mkdir(exist_ok=True)
-
-    # Model Output
-    temp = res["temp"]
-    o2 = res["o2"] / volume[:, None]
-    docl = res["docl"]
-    docr = res["docr"]
-    pocl = res["pocl"]
-    pocr = res["pocr"]
-    npp = res["npp"]
-    # atm_flux = res["atm_flux_output"]
-    docl_resp = res["docl_respiration"]
-    docr_resp = res["docr_respiration"]
-    poc_resp = res["poc_respiration"]
-    secchi = res["secchi"]
-    doc = (res["docl"] + res["docr"]) / volume[:, None]
-    poc = (res["pocl"] + res["pocr"]) / volume[:, None]
+        lake_output_dir = output_dir / lake_key
+        lake_output_dir.mkdir(exist_ok=True)
         
-    r_layer = (
+        # Model Output
+        temp = res["temp"]
+        o2 = res["o2"] / volume[:, None]
+        docl = res["docl"]
+        docr = res["docr"]
+        pocl = res["pocl"]
+        pocr = res["pocr"]
+        npp = res["npp"]
+        docl_resp = res["docl_respiration"]
+        docr_resp = res["docr_respiration"]
+        poc_resp = res["poc_respiration"]
+        secchi = res["secchi"]
+        doc = (res["docl"] + res["docr"]) / volume[:, None]
+        poc = (res["pocl"] + res["pocr"]) / volume[:, None]
+            
+        r_layer = (
             (docl * docl_resp) +
             (docr * docr_resp) +
             (pocl * poc_resp) +
-            (pocr * poc_resp))  # g/d per layer
-        
-    r_layer_m2 = r_layer / area[:, None] #g/m2/d
-        
-    gpp_layer = npp  # g/d per layer
-    gpp_layer_m2 = gpp_layer / area[:, None] #g/m2/d
-        
-    nep_layer = gpp_layer - r_layer #g/d per layer
-    nep_layer_m2 = nep_layer / area[:, None] #g/m2/d
-        
-    dfs = [
+            (pocr * poc_resp)
+        )  
+            
+        r_layer_m2 = r_layer / area[:, None] 
+        gpp_layer = npp  
+        gpp_layer_m2 = gpp_layer / area[:, None] 
+        nep_layer = gpp_layer - r_layer 
+        nep_layer_m2 = nep_layer / area[:, None] 
+            
+        dfs = [
             melt_var(temp, times, depth, "WaterTemp_C"),
             melt_var(o2, times, depth, "Water_DO_mg_per_L"),
             melt_var(doc, times, depth, "Water_DOC_mg_per_L"),
@@ -238,60 +234,80 @@ def process_lake(lake_num):
             melt_var(gpp_layer_m2, times, depth, "GPP_g_per_m2_day"),  
             melt_var(nep_layer, times, depth, "NEP_g_per_day"),
             melt_var(nep_layer_m2, times, depth, "NEP_g_per_m2_day"),
-  ]
-    
-    fm_lake = dfs[0]
-    for df in dfs[1:]:
-            fm_lake = fm_lake.merge(df, on=["datetime", "depth"], how="left")
-            
-    fm_lake["depth"] = fm_lake["depth"] - 0.25
+        ]
         
-    fm_lake.to_parquet(lake_output_dir / f"{lake_key}_model.parquet", index=False, compression='zstd')
+        fm_lake = dfs[0]
+        for df in dfs[1:]:
+            fm_lake = fm_lake.merge(df, on=["datetime", "depth"], how="left")
+                
+        fm_lake["depth"] = fm_lake["depth"] - 0.25
+            
+        fm_lake.to_parquet(lake_output_dir / f"{lake_key}_model.parquet", index=False, compression='zstd')
 
-    # Driver Output
-    meteo = res["meteo_input"]
-    secchi = res["secchi"]
-    TP = res.get("TP", np.zeros_like(secchi))
-    
-    fm_driver = pd.DataFrame({
+        # Driver Output
+        meteo = res["meteo_input"]
+        secchi = res["secchi"]
+        TP = res.get("TP", np.zeros_like(secchi))
+        
+        fm_driver = pd.DataFrame({
             "datetime": times,
-            "Shortwave_Radiation_Downwelling_wattPerMeterSquared": meteo_all["Shortwave_Radiation_Downwelling_wattPerMeterSquared"].values, #input file
-            "Longwave_Flux_wattPerMeterSquared": meteo[1, :], #flux calculated in heating res 
-            "Air_Temperature_celsius": meteo_all["Air_Temperature_celsius"].values, #input file
-            "Ten_Meter_Elevation_Wind_Speed_meterPerSecond": meteo_all["Ten_Meter_Elevation_Wind_Speed_meterPerSecond"].values, #added windfactor
-            "Precipitation_millimeterPerDay": meteo_all["Precipitation_millimeterPerDay"].values,#input file
+            "Shortwave_Radiation_Downwelling_wattPerMeterSquared": meteo_all["Shortwave_Radiation_Downwelling_wattPerMeterSquared"].values, 
+            "Longwave_Flux_wattPerMeterSquared": meteo[1, :], 
+            "Air_Temperature_celsius": meteo_all["Air_Temperature_celsius"].values, 
+            "Ten_Meter_Elevation_Wind_Speed_meterPerSecond": meteo_all["Ten_Meter_Elevation_Wind_Speed_meterPerSecond"].values, 
+            "Precipitation_millimeterPerDay": meteo_all["Precipitation_millimeterPerDay"].values,
             "Water_Secchi_m": secchi.flatten(),
             "TP_load_ug_per_L": TP.flatten(),})
-    
+        
+        fm_driver.to_parquet(lake_output_dir / f"{lake_key}_driver.parquet", index=False, compression='zstd')
+        
+        return lake_key
 
-    fm_driver.to_parquet(lake_output_dir / f"{lake_key}_driver.parquet", index=False, compression='zstd')
-
-    return f"======= Completed {lake_key} ======="
-
+    finally:
+        # Guarantee removal from the active list even if it crashes
+        if lake_num in active_dict:
+            del active_dict[lake_num]
 
 
 # --- 2. Main Execution Block ---
 if __name__ == '__main__':
-    # Determine the total number of lakes directly from the configs
-    num_lakes = get_num_data_columns(config_dir / "run_config.csv", "nx")
     
-    # Use CPU count to determine number of workers
+    # Initialize error log file
+    log_file = "failed_lakes.log"
+    with open(output_dir / log_file, "w") as f:
+        f.write("--- Failed Lakes Log ---\n")
+
+    num_lakes = get_num_data_columns(config_dir / "run_config.csv", "nx")
     max_workers = multiprocessing.cpu_count()
+    
+    # Multiprocessing Manager to share the active lake states
+    manager = multiprocessing.Manager()
+    active_lakes = manager.dict()
     
     print(f"Detected {num_lakes} lakes in config.")
     print(f"Starting parallel run across {max_workers} worker processes...")
     
-    # Run the pool using indices 1 to num_lakes inclusive
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all lakes to the pool
-        futures = {executor.submit(process_lake, i): i for i in range(1, num_lakes + 1)}
+        # Pass the active_lakes dictionary into the worker
+        futures = {executor.submit(process_lake, i, active_lakes): i for i in range(1, num_lakes + 1)}
         
-        for future in as_completed(futures):
-            lake_idx = futures[future]
-            try:
-                result = future.result()
-                print(result)
-            except Exception as exc:
-                print(f"❌ Lake index {lake_idx} generated an exception: {exc}")
+        # Setup the progress bar
+        with tqdm(total=num_lakes, desc="Simulating Lakes") as pbar:
+            for future in as_completed(futures):
+                lake_idx = futures[future]
+                try:
+                    # Capture success
+                    result = future.result()
+                except Exception as exc:
+                    # Log failure silently
+                    with open(log_file, "a") as f:
+                        f.write(f"Lake Index {lake_idx} failed: {exc}\n")
                 
-    print("\nAll simulations completed.")
+                # Fetch currently active lake names
+                active_names = list(active_lakes.values())
+                display_active = ", ".join(active_names)
+
+                # Update progress bar dynamically
+                pbar.set_postfix_str(f"Active: [{display_active}]")
+                pbar.update(1)
+                
