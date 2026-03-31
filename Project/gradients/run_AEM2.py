@@ -201,6 +201,7 @@ def process_lake(lake_name):
     # Save to HDF5
     with h5py.File(lake_output_dir / f"{run_config.name}.h5", "w") as h5f:
         save_dict_to_hdf5(h5f, "/", res)
+        
     # Model Output CSV
     temp = res["temp"]
     o2 = res["o2"] / volume[:, None]
@@ -250,7 +251,8 @@ def process_lake(lake_name):
             
     fm_lake["depth"] = fm_lake["depth"] - 0.25
     fm_lake.to_parquet(lake_output_dir / f"{lake_key}_model.parquet", index=False, compression='zstd')
-    # Driver Output CSV
+    
+    # Driver Output
     meteo = res["meteo_input"]
     secchi = res["secchi"]
     TP = res.get("TP", np.zeros_like(secchi))

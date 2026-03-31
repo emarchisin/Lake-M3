@@ -2,13 +2,11 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from pathlib import Path
-import h5py
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from processBased_lakeModel_functions import run_wq_model
 from model_setup import get_num_data_columns, get_hypsography, get_lake_config, get_model_params, get_run_config, get_ice_and_snow, provide_meteorology, initial_profile, wq_initial_profile, provide_phosphorus, provide_carbon
-from hdf5_functions import save_dict_to_hdf5
 
 def melt_var(arr_2d, datetimes, depth, varname):
     arr_2d = np.asarray(arr_2d)
@@ -198,10 +196,8 @@ def process_lake(lake_num):
 
     lake_output_dir = output_dir / lake_key
     lake_output_dir.mkdir(exist_ok=True)
-    with h5py.File(lake_output_dir / f"{lake_key}.h5", "w") as h5f:
-        save_dict_to_hdf5(h5f, "/", res)
 
-    # Model Output CSV
+    # Model Output
     temp = res["temp"]
     o2 = res["o2"] / volume[:, None]
     docl = res["docl"]
@@ -250,9 +246,9 @@ def process_lake(lake_num):
             
     fm_lake["depth"] = fm_lake["depth"] - 0.25
         
-    fm_lake.to_csv(lake_output_dir / f"{lake_key}_model.csv",index=False)
+    fm_lake.to_parquet(lake_output_dir / f"{lake_key}_model.parquet", index=False, compression='zstd')
 
-    # Driver Output CSV
+    # Driver Output
     meteo = res["meteo_input"]
     secchi = res["secchi"]
     TP = res.get("TP", np.zeros_like(secchi))
@@ -268,9 +264,11 @@ def process_lake(lake_num):
             "TP_load_ug_per_L": TP.flatten(),})
     
 
-    fm_driver.to_csv(lake_output_dir / f"{lake_key}_driver.csv",index=False)
+    fm_driver.to_parquet(lake_output_dir / f"{lake_key}_driver.parquet", index=False, compression='zstd')
 
     return f"======= Completed {lake_key} ======="
+
+
 
 # --- 2. Main Execution Block ---
 if __name__ == '__main__':
