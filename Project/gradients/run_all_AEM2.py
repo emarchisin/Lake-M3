@@ -6,6 +6,7 @@ import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import os
 import contextlib
+import traceback
 from tqdm import tqdm
 
 from processBased_lakeModel_functions import run_wq_model
@@ -41,7 +42,17 @@ def process_lake(lake_num, active_dict):
     run_config = get_run_config(config_dir / "run_config.csv", lake_num)
     
     lake_key = f"{run_config.name}"
+    lake_output_dir = output_dir / lake_key
+        
+    # Check if output already exists and skip if so ---
+    model_file = lake_output_dir / f"{lake_key}_model.parquet"
+    driver_file = lake_output_dir / f"{lake_key}_driver.parquet"
     
+    if model_file.exists() and driver_file.exists():
+        return True, f"{lake_key} (Skipped)"
+
+    lake_output_dir.mkdir(exist_ok=True)
+
     # Register this lake as currently running
     active_dict[lake_num] = lake_key
     
@@ -191,9 +202,6 @@ def process_lake(lake_num, active_dict):
         res['volume'] = volume
         res['area'] = area
         res['depth'] = depth
-
-        lake_output_dir = output_dir / lake_key
-        lake_output_dir.mkdir(exist_ok=True)
         
         # Model Output
         temp = res["temp"]
@@ -261,7 +269,13 @@ def process_lake(lake_num, active_dict):
         
         fm_driver.to_parquet(lake_output_dir / f"{lake_key}_driver.parquet", index=False, compression='zstd')
         
-        return lake_key
+        return True, lake_key
+
+    except Exception as e:
+        # Catch any failure, format it, and return as a failure tuple
+        error_trace = traceback.format_exc()
+        error_msg = f"Failed {lake_key}:\n{e}\n{error_trace}\n{'-'*40}\n"
+        return False, error_msg
 
     finally:
         # Guarantee removal from the active list even if it crashes
@@ -273,8 +287,8 @@ def process_lake(lake_num, active_dict):
 if __name__ == '__main__':
     
     # Initialize error log file
-    log_file = "failed_lakes.log"
-    with open(output_dir / log_file, "w") as f:
+    log_file = output_dir / "failed_lakes.log"
+    with open(log_file, "w") as f:
         f.write("--- Failed Lakes Log ---\n")
 
     num_lakes = get_num_data_columns(config_dir / "run_config.csv", "nx")
@@ -295,18 +309,24 @@ if __name__ == '__main__':
         with tqdm(total=num_lakes, desc="Simulating Lakes") as pbar:
             for future in as_completed(futures):
                 lake_idx = futures[future]
+                
                 try:
-                    # Capture success
-                    result = future.result()
+                    # Unpack the tuple returned by process_lake
+                    success, message = future.result()
+                    
+                    if not success:
+                        with open(log_file, "a") as f:
+                            f.write(message)
+                            
                 except Exception as exc:
-                    # Log failure silently
+                    # This catches severe multiprocessing pool errors (e.g. out of memory crashes)
                     with open(log_file, "a") as f:
-                        f.write(f"Lake Index {lake_idx} failed: {exc}\n")
+                        f.write(f"Process Pool crashed on Lake Index {lake_idx} with error: {exc}\n{'-'*40}\n")
                 
                 # Fetch currently active lake names
                 active_names = list(active_lakes.values())
                 display_active = ", ".join(active_names)
-
+               
                 # Update progress bar dynamically
                 pbar.set_postfix_str(f"Active: [{display_active}]")
                 pbar.update(1)

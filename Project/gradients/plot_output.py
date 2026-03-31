@@ -84,6 +84,7 @@ depth_group={
 output_dir=Path('Project/gradients/output')
 
 lake_keys = [
+    "dish_10ha_15mgl_1yr_high_tp_northern_plains",
     "dish_10ha_15mgl_10yr_high_tp_xeric",
     "dish_10ha_1mgl_1yr_low_tp_coastal_plains",
     "dish_1000ha_1mgl_1yr_low_tp_southern_plains",

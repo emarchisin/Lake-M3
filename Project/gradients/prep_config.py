@@ -77,7 +77,7 @@ ecoregion_geo_map = {
 tp_oc_pairs = [
     ('tp/low_tp.csv', 1, 2e-6),
     ('tp/med_tp.csv', 1, 7e-6),
-    ('tp/high_tp.csv', 15, 2e-5),
+    ('tp/high_tp.csv', 15, 1e-5),
     ('tp/med_tp.csv', 30, 1e-5)
 ]
 

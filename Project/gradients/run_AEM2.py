@@ -277,6 +277,7 @@ def process_lake(lake_name):
 # --- 2. Main execution block for parallel processing ---
 if __name__ == '__main__':
     target_lakes = [
+    "dish_10ha_15mgl_1yr_high_tp_northern_plains",
     "dish_10ha_15mgl_10yr_high_tp_xeric",
     "dish_10ha_1mgl_1yr_low_tp_coastal_plains",
     "dish_1000ha_1mgl_1yr_low_tp_southern_plains",
