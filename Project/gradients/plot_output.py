@@ -91,12 +91,12 @@ lake_keys = [
     "bucket_1000ha_15mgl_10yr_high_tp_xeric",
     "bucket_10ha_30mgl_10yr_med_tp_southern_plains",
     "bucket_10ha_15mgl_5yr_high_tp_coastal_plains",
-    # "dish_10ha_30mgl_10yr_med_tp_northern_plains",
+    "dish_10ha_30mgl_10yr_med_tp_northern_plains",
     "bucket_1000ha_1mgl_1yr_low_tp_western_mountains",
     "dish_1000ha_30mgl_10yr_med_tp_western_mountains",
     "bowl_100ha_15mgl_5yr_high_tp_xeric",
     "bucket_1000ha_30mgl_10yr_med_tp_northern_appalachians",
-    # "bowl_1000ha_1mgl_10yr_low_tp_northern_plains"
+    "bowl_1000ha_1mgl_10yr_low_tp_northern_plains"
 ]
 
 for key in lake_keys:

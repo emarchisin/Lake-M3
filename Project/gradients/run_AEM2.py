@@ -287,7 +287,7 @@ if __name__ == '__main__':
     "dish_1000ha_30mgl_10yr_med_tp_western_mountains",
     "bowl_100ha_15mgl_5yr_high_tp_xeric",
     "bucket_1000ha_30mgl_10yr_med_tp_northern_appalachians",
-    # "bowl_1000ha_1mgl_10yr_low_tp_northern_plains"
+    "bowl_1000ha_1mgl_10yr_low_tp_northern_plains"
 ]
     
     # Get count of CPUs to determine how many workers to use
