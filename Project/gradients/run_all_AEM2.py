@@ -287,7 +287,7 @@ def process_lake(lake_num, active_dict):
 if __name__ == '__main__':
     
     # Initialize error log file
-    log_file = output_dir / "failed_lakes.log"
+    log_file = lake_dir / "failed_lakes.log"
     with open(log_file, "w") as f:
         f.write("--- Failed Lakes Log ---\n")
 
@@ -306,7 +306,7 @@ if __name__ == '__main__':
         futures = {executor.submit(process_lake, i, active_lakes): i for i in range(1, num_lakes + 1)}
         
         # Setup the progress bar
-        with tqdm(total=num_lakes, desc="Simulating Lakes") as pbar:
+        with tqdm(total=num_lakes, desc="Running Models") as pbar:
             for future in as_completed(futures):
                 lake_idx = futures[future]
                 
