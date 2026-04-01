@@ -34,7 +34,7 @@ lake_dir = Path('Project/gradients')
 
 config_dir = lake_dir / "config"
 driver_dir = lake_dir / "drivers"
-output_dir = lake_dir / "output"
+output_dir = lake_dir / "export"
 
 # Define the worker function ---
 def process_lake(lake_num, active_dict):

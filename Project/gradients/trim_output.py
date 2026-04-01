@@ -46,7 +46,7 @@ def remove_old_parquet_data(root_folder: str, cutoff_date_str: str):
 
 # Main execution block -----------------------
 if __name__ == "__main__":
-    TARGET_FOLDER = "Project/gradients/output_test"
+    TARGET_FOLDER = "Project/gradients/export"
     CUTOFF_DATE = "2018-01-01" 
     
     remove_old_parquet_data(TARGET_FOLDER, CUTOFF_DATE)
