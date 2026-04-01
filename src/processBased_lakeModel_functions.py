@@ -1588,7 +1588,7 @@ def do_sat_calc(temp, baro=None, altitude = 0, salinity = 0, _warn_printed=[Fals
     if baro is not None and baro > 2000:
         baro=baro/100 # Pa -> hPa
         if not _warn_printed [0]:
-            print(" Warning: barometric pressure > 2000, assuming Pa and converting to hPa") # print warning to user
+            # print(" Warning: barometric pressure > 2000, assuming Pa and converting to hPa") # print warning to user
             _warn_printed[0]= True 
             
     u = 10 ** (8.10765 - 1750.286 / (235 + temp)) # u is vapor pressure of water; water temp is used as an approximation for water & air temp at the air-water boundary
