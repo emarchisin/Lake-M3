@@ -36,7 +36,7 @@ config_dir = lake_dir / "config"
 driver_dir = lake_dir / "drivers"
 output_dir = lake_dir / "output"
 
-# --- 1. Define the worker function ---
+# Define the worker function ---
 def process_lake(lake_num, active_dict):
     lake_config = get_lake_config(config_dir / "lake_config.csv", lake_num)
     run_config = get_run_config(config_dir / "run_config.csv", lake_num)
@@ -44,14 +44,12 @@ def process_lake(lake_num, active_dict):
     lake_key = f"{run_config.name}"
     lake_output_dir = output_dir / lake_key
         
-    # Check if output already exists and skip if so ---
+    # Check if output already exists and skip if so 
     model_file = lake_output_dir / f"{lake_key}_model.parquet"
     driver_file = lake_output_dir / f"{lake_key}_driver.parquet"
     
     if model_file.exists() and driver_file.exists():
         return True, f"{lake_key} (Skipped)"
-
-    lake_output_dir.mkdir(exist_ok=True)
 
     # Register this lake as currently running
     active_dict[lake_num] = lake_key
@@ -249,8 +247,6 @@ def process_lake(lake_num, active_dict):
             fm_lake = fm_lake.merge(df, on=["datetime", "depth"], how="left")
                 
         fm_lake["depth"] = fm_lake["depth"] - 0.25
-            
-        fm_lake.to_parquet(lake_output_dir / f"{lake_key}_model.parquet", index=False, compression='zstd')
 
         # Driver Output
         meteo = res["meteo_input"]
@@ -267,6 +263,8 @@ def process_lake(lake_num, active_dict):
             "Water_Secchi_m": secchi.flatten(),
             "TP_load_ug_per_L": TP.flatten(),})
         
+        lake_output_dir.mkdir(exist_ok=True)
+        fm_lake.to_parquet(lake_output_dir / f"{lake_key}_model.parquet", index=False, compression='zstd')
         fm_driver.to_parquet(lake_output_dir / f"{lake_key}_driver.parquet", index=False, compression='zstd')
         
         return True, lake_key
@@ -283,7 +281,7 @@ def process_lake(lake_num, active_dict):
             del active_dict[lake_num]
 
 
-# --- 2. Main Execution Block ---
+# Main Execution Block ---
 if __name__ == '__main__':
     
     # Initialize error log file
