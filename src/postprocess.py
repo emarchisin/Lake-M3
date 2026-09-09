@@ -757,7 +757,7 @@ def post_process(
                 # "Discharge_m3_per_d"]
     
             median_vars = [
-                "hortwave_Radiation_Downwelling_wattPerMeterSquared",
+                "Shortwave_Radiation_Downwelling_wattPerMeterSquared",
                 "Air_Temperature_celsius",
                 "Ten_Meter_Elevation_Wind_Speed_meterPerSecond",
                 "Water_Secchi_m"]
@@ -819,7 +819,7 @@ def post_process(
             "datetime": times,
             "Air_Temperature_celsius": meteo_all["Air_Temperature_celsius"].values,
             "Shortwave_Radiation_Downwelling_wattPerMeterSquared": meteo_all["Shortwave_Radiation_Downwelling_wattPerMeterSquared"].values,
-            "Longwave_Flux_wattPerMeterSquared": meteo[1, :],
+            "Longwave_Radiation_Downwelling_wattPerMeterSquared":meteo_all["Longwave_Radiation_Downwelling_wattPerMeterSquared"].values, #need raw for ML work
             "Relative_Humidity_percent": meteo_all["Relative_Humidity_percent"].values,
             "Ten_Meter_Elevation_Wind_Speed_meterPerSecond": meteo_all["Ten_Meter_Elevation_Wind_Speed_meterPerSecond"].values,
             "Precipitation_millimeterPerDay": meteo_all["Precipitation_millimeterPerDay"].values,
@@ -840,7 +840,7 @@ def post_process(
         "datetime",
         "Air_Temperature_celsius",
         "Shortwave_Radiation_Downwelling_wattPerMeterSquared",
-        "Longwave_Flux_wattPerMeterSquared",
+        "Longwave_Radiation_Downwelling_wattPerMeterSquared",
         "Relative_Humidity_percent",
         "Ten_Meter_Elevation_Wind_Speed_meterPerSecond",
         "Precipitation_millimeterPerDay",
